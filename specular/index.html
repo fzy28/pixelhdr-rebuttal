@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer"><meta name="robots" content="noindex,nofollow,noarchive">
+<title>Specular and Metallic Relighting</title>
+<style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<style>
+/* Layout: plain result lists, one example per row (input | lighting | output | GT); summary tables first. Single dark theme for viewing images. */
+:root {
+  --bg: #1a1b1d;
+  --panel: #222327;
+  --line: #34363a;
+  --fg: #e3e4e6;
+  --muted: #9a9ca1;
+  --accent: #9cc0e0;
+  --up: #7fc79a;
+  --down: #e8907e;
+  --img-bg: #0e0e0f;
+  --s1: #3987e5;
+  --s2: #d95926;
+  --f-body: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif;
+  --f-mono: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  color-scheme: dark;
+}
+body { background: var(--bg); color: var(--fg); font-family: var(--f-body); font-size: 15px; line-height: 1.5; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-block: 24px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 28px; }
+.wrap.wide { max-width: 1480px; }
+h1 { font-size: 26px; margin: 0; text-wrap: balance; }
+h2 { font-size: 19px; margin: 0; text-wrap: balance; }
+h3 { font-size: 16px; margin: 0; }
+a { color: var(--accent); }
+.toc { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 14px; }
+section { display: grid; gap: 10px; min-width: 0; }
+.note { color: var(--muted); font-size: 13.5px; margin: 0; max-width: 82ch; }
+.note b { color: var(--fg); font-weight: 600; }
+.tablewrap { overflow-x: auto; min-width: 0; }
+table { border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+th, td { padding: 6px 12px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+th { color: var(--muted); font-weight: 500; }
+tr.hl td { color: #fff; font-weight: 600; }
+.mono { font-family: var(--f-mono); font-size: 13px; }
+.meta { font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.meta b { color: var(--fg); font-weight: 600; }
+.up { color: var(--up); }
+.down { color: var(--down); }
+.head { font-size: 13px; color: var(--muted); }
+.pic { position: relative; min-width: 0; }
+.pic img, img.pic { display: block; width: 100%; height: auto; max-width: 100%; background: var(--img-bg); border-radius: 3px; cursor: zoom-in; }
+.chip { position: absolute; font-size: 11px; line-height: 1; padding: 3px 5px; border-radius: 3px; background: rgba(14, 14, 15, 0.72); color: #f2f2f2; pointer-events: none; white-space: nowrap; }
+.lb { position: fixed; inset: 0; background: rgba(8, 8, 9, 0.94); z-index: 20; display: grid; place-items: center; padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); cursor: zoom-out; }
+.lb img { max-width: 100%; max-height: 92vh; }
+.chart { width: 100%; max-width: 760px; height: auto; display: block; }
+.chart text { fill: var(--muted); font: 12px var(--f-body); font-variant-numeric: tabular-nums; }
+.chart .lab { fill: var(--fg); }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 13px; color: var(--muted); }
+.legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; background: var(--c); vertical-align: -1px; }
+.tip { position: fixed; z-index: 30; pointer-events: none; background: #0e0e0f; border: 1px solid var(--line); border-radius: 4px; padding: 6px 8px; font-size: 12.5px; color: var(--fg); font-variant-numeric: tabular-nums; max-width: 280px; }
+.card-links { display: flex; flex-wrap: wrap; gap: 8px 14px; }
+.btn { display: inline-block; padding: 6px 12px; border: 1px solid var(--line); border-radius: 4px; background: var(--panel); text-decoration: none; font-size: 14px; }
+.btn:hover, .btn:focus-visible { border-color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+:root { --f-body: system-ui, "Segoe UI", Helvetica, Arial, sans-serif; --mark: #ffd23f; }
+.lead { margin: 0; max-width: 78ch; }
+.key { display: flex; flex-wrap: wrap; gap: 6px 22px; font-size: 13.5px; color: var(--muted); margin: 0; padding: 0; list-style: none; }
+.key b { color: var(--fg); font-weight: 600; }
+.part { gap: 18px; }
+.obj { display: grid; grid-template-columns: minmax(180px, 250px) minmax(0, 1fr); gap: 16px; align-items: start; border-top: 1px solid var(--line); padding-top: 14px; }
+.obj h3 { grid-column: 1 / -1; }
+.obj .input { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 8px); display: grid; gap: 4px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 16px 10px; min-width: 0; }
+.tiles.gt { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+.tile { display: grid; gap: 4px; min-width: 0; align-content: start; }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.cap { font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.cap b { color: var(--fg); font-weight: 600; }
+.chip { left: 5px; top: 5px; }
+.pic img { aspect-ratio: 1 / 1; object-fit: contain; }
+.pic.erp img { aspect-ratio: 2 / 1; }
+.boxmark { position: absolute; border: 2px solid var(--mark); box-sizing: border-box; pointer-events: none; }
+.pic.zoom img { border: 2px solid var(--mark); box-sizing: border-box; }
+.pic.has-box .chip { top: auto; bottom: 5px; }
+@media (max-width: 640px) {
+  .obj { grid-template-columns: minmax(0, 1fr); }
+  .obj .input { position: static; max-width: 60%; }
+  .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tiles.gt { grid-template-columns: minmax(0, 1fr); }
+}
+</style>
+</head>
+<body>
+<div class="wrap wide">
+  <h1>Relighting specular and metallic materials</h1>
+  <p class="lead">Additional results for the question on highly specular, mirror-like materials. Every result on this page comes from our model trained only on synthetic data. For each input we show all lighting conditions that were run, without selection.</p>
+  <ul class="key">
+    <li><b>Input</b>: the single source image given to the model</li>
+    <li><b>Target lighting</b>: the target environment map (equirectangular panorama)</li>
+    <li><b>Our output</b>: the relit image predicted by our model</li>
+    <li><b>Ground truth</b>: the real capture under the target lighting (last part only)</li>
+  </ul>
+  <p class="note">Click any image to enlarge it. Inputs and outputs are the full square images used by the model, without cropping, except for the four-sphere scene, where each sphere is shown as its own crop.</p>
+  <div id="toc" class="toc"></div>
+  <div id="sections"></div>
+</div>
+
+<script>
+// Shared helpers: element builders, lazy images with a lightbox, tables, a hover tooltip for charts.
+const $ = id => document.getElementById(id);
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text !== undefined && text !== null) e.textContent = text;
+  return e;
+}
+function f(x, d = 2) { return (x === null || x === undefined || Number.isNaN(x)) ? "–" : Number(x).toFixed(d); }
+function signed(x, d = 2) { return (x >= 0 ? "+" : "−") + Math.abs(x).toFixed(d); }
+
+const lb = el("div", "lb"); lb.hidden = true;
+const lbImg = el("img"); lbImg.alt = ""; lb.append(lbImg);
+document.body.append(lb);
+lb.addEventListener("click", () => { lb.hidden = true; });
+document.addEventListener("keydown", e => { if (e.key === "Escape") lb.hidden = true; });
+
+// pic(src, alt, chips): chips = [[text, cssText], ...] positioned over the image.
+function pic(src, alt, chips) {
+  const w = el("div", "pic");
+  const i = el("img"); i.src = src; i.alt = alt || ""; i.loading = "lazy"; i.decoding = "async";
+  i.addEventListener("click", () => { lbImg.src = src; lb.hidden = false; });
+  w.append(i);
+  for (const [t, css] of chips || []) { const c = el("span", "chip", t); c.style.cssText = css; w.append(c); }
+  return w;
+}
+
+// table(head, rows, hlIndex): rows are arrays of cell strings.
+function table(head, rows, hl) {
+  const wrap = el("div", "tablewrap"), t = el("table"), th = el("tr");
+  for (const h of head) th.append(el("th", null, h));
+  t.append(th);
+  rows.forEach((r, k) => {
+    const tr = el("tr", (hl || []).includes(k) ? "hl" : null);
+    for (const c of r) tr.append(el("td", null, c));
+    t.append(tr);
+  });
+  wrap.append(t);
+  return wrap;
+}
+
+const tip = el("div", "tip"); tip.hidden = true; document.body.append(tip);
+function showTip(ev, lines) {
+  tip.replaceChildren(...lines.map((l, k) => { const d = el("div", null, l); if (k === 0) d.style.fontWeight = "600"; return d; }));
+  tip.hidden = false;
+  const x = Math.min(ev.clientX + 14, window.innerWidth - tip.offsetWidth - 8);
+  const y = Math.min(ev.clientY + 14, window.innerHeight - tip.offsetHeight - 8);
+  tip.style.left = x + "px"; tip.style.top = y + "px";
+}
+function hideTip() { tip.hidden = true; }
+
+const SVG = "http://www.w3.org/2000/svg";
+function svg(tag, attrs, text) {
+  const e = document.createElementNS(SVG, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+function hover(node, lines) {
+  node.addEventListener("mousemove", ev => showTip(ev, lines));
+  node.addEventListener("mouseleave", hideTip);
+  node.addEventListener("click", ev => showTip(ev, lines));
+}
+function tocLink(id, text) { const a = el("a", null, text); a.href = "#" + id; $("toc").append(a); }
+
+const D = {"groups":[{"id":"synthetic","title":"Synthetic metallic objects","notes":["Eight scenes with physically based metal materials, rendered with Blender Cycles at 2048×2048. None of them is in the training set. One scene contains four spheres (mirror chrome, glossy steel, rough steel and a diffuse reference); it was rendered and relit as one image, and each sphere is shown below as a separate crop. Lighting: 16 Poly Haven environment maps that are not in the training set (interiors, studios, night, sunset, snow, overcast, colored lights) and 3 environment maps with a single sun (front, side, back).","Display: outputs are exposed on the object region and tone-mapped with ACES 2.0, the same conversion as for the input."],"objects":[{"id":"chrome_sphere","name":"Chrome sphere","source":"i/02a6efb565446b4b.jpg","cases":[{"light":"Fireplace","erp":"i/e04fb24b6bc7eb07.jpg","out":"i/1e39a94babf734a1.jpg"},{"light":"Cinema hall","erp":"i/68332ca65489eed3.jpg","out":"i/ca6c805abe2556bf.jpg"},{"light":"Blue photo studio","erp":"i/337041a9e13f7251.jpg","out":"i/57ea8df21e07b32a.jpg"},{"light":"Brown photostudio 02","erp":"i/6a4b843043dd9903.jpg","out":"i/f6021fb90fc4c2ac.jpg"},{"light":"Kloofendal overcast","erp":"i/9808046f533f367b.jpg","out":"i/414513591f6d70d4.jpg"},{"light":"Satara night no lamps","erp":"i/16867f75e536b678.jpg","out":"i/84f5c5e52787e837.jpg"},{"light":"Dresden station night","erp":"i/d0c81e9d1240b528.jpg","out":"i/8399b23b6ff5008b.jpg"},{"light":"The sky is on fire","erp":"i/06f973fe2d1b142a.jpg","out":"i/152a9521236063d2.jpg"},{"light":"Neon photostudio","erp":"i/3daaf6976ee0baf4.jpg","out":"i/223cde58c5cea01f.jpg"},{"light":"Colorful studio","erp":"i/0fd7dd53d0a60a98.jpg","out":"i/7fb0e38c35c4c7a2.jpg"},{"light":"Syferfontein 18d clear","erp":"i/88ccd91a36278a72.jpg","out":"i/0e8ff66e0a8a4698.jpg"},{"light":"Venice sunset","erp":"i/cf25e62f7c363b27.jpg","out":"i/39b810baaabf55c8.jpg"},{"light":"Studio small 09","erp":"i/c17db45f880757ff.jpg","out":"i/628dbb08b79e2ca4.jpg"},{"light":"Photo studio loft hall","erp":"i/3cc638e72b55cf64.jpg","out":"i/757a34146ad8d88a.jpg"},{"light":"Snowy field","erp":"i/f26790ab3a0fa1e6.jpg","out":"i/58fafde1da28a35a.jpg"},{"light":"Leadenhall market","erp":"i/fa252e11c7fcf5d9.jpg","out":"i/4ce986db79ea3d93.jpg"},{"light":"Single sun, front","erp":"i/9e27e2f439b7340a.jpg","out":"i/5f5869e0dc5d3763.jpg"},{"light":"Single sun, side","erp":"i/71c30cf389b25445.jpg","out":"i/a531f08087887698.jpg"},{"light":"Single sun, back","erp":"i/703f4efc7e9040cd.jpg","out":"i/3f956aa89f8aa24c.jpg"}]},{"id":"sphere-mirror","name":"Sphere 1 of 4: mirror chrome (roughness 0)","note":"Crop from the four-sphere image. The four spheres were rendered and relit together in one image.","source":"i/a5884f18430327cc.jpg","cases":[{"light":"Fireplace","erp":"i/e04fb24b6bc7eb07.jpg","out":"i/9afa0a4f9b2b42ca.jpg"},{"light":"Cinema hall","erp":"i/68332ca65489eed3.jpg","out":"i/56b9f3c6c7ea7ae1.jpg"},{"light":"Blue photo studio","erp":"i/337041a9e13f7251.jpg","out":"i/91c4270d4b020b46.jpg"},{"light":"Brown photostudio 02","erp":"i/6a4b843043dd9903.jpg","out":"i/32d3cc7cba13784d.jpg"},{"light":"Kloofendal overcast","erp":"i/9808046f533f367b.jpg","out":"i/82c8141abd52e6b6.jpg"},{"light":"Satara night no lamps","erp":"i/16867f75e536b678.jpg","out":"i/2b9e46ea5c3403ad.jpg"},{"light":"Dresden station night","erp":"i/d0c81e9d1240b528.jpg","out":"i/0abeae40d0695691.jpg"},{"light":"The sky is on fire","erp":"i/06f973fe2d1b142a.jpg","out":"i/f4920f83e2c39c8b.jpg"},{"light":"Neon photostudio","erp":"i/3daaf6976ee0baf4.jpg","out":"i/c96b3fb18838b221.jpg"},{"light":"Colorful studio","erp":"i/0fd7dd53d0a60a98.jpg","out":"i/4950e710f871582c.jpg"},{"light":"Syferfontein 18d clear","erp":"i/88ccd91a36278a72.jpg","out":"i/70d163003ea363eb.jpg"},{"light":"Venice sunset","erp":"i/cf25e62f7c363b27.jpg","out":"i/157843c99852e197.jpg"},{"light":"Studio small 09","erp":"i/c17db45f880757ff.jpg","out":"i/3d3e47f7b1990296.jpg"},{"light":"Photo studio loft hall","erp":"i/3cc638e72b55cf64.jpg","out":"i/8ea2df27fa11d753.jpg"},{"light":"Snowy field","erp":"i/f26790ab3a0fa1e6.jpg","out":"i/37205df2da319e6a.jpg"},{"light":"Leadenhall market","erp":"i/fa252e11c7fcf5d9.jpg","out":"i/375cef47a27e0687.jpg"},{"light":"Single sun, front","erp":"i/9e27e2f439b7340a.jpg","out":"i/fe15ac7f439f1dc1.jpg"},{"light":"Single sun, side","erp":"i/71c30cf389b25445.jpg","out":"i/14763ffd2ddc44f4.jpg"},{"light":"Single sun, back","erp":"i/703f4efc7e9040cd.jpg","out":"i/1b9deab6381a56d1.jpg"}]},{"id":"sphere-glossy","name":"Sphere 2 of 4: glossy steel (roughness 0.12)","note":"Crop from the four-sphere image. The four spheres were rendered and relit together in one image.","source":"i/0ca1f192bc3ac8cd.jpg","cases":[{"light":"Fireplace","erp":"i/e04fb24b6bc7eb07.jpg","out":"i/e3c43df92c50572a.jpg"},{"light":"Cinema hall","erp":"i/68332ca65489eed3.jpg","out":"i/71335cd1e9dc516b.jpg"},{"light":"Blue photo studio","erp":"i/337041a9e13f7251.jpg","out":"i/5d888ce5adb1709e.jpg"},{"light":"Brown photostudio 02","erp":"i/6a4b843043dd9903.jpg","out":"i/bd678253210b3953.jpg"},{"light":"Kloofendal overcast","erp":"i/9808046f533f367b.jpg","out":"i/c256cc70c17a0be2.jpg"},{"light":"Satara night no lamps","erp":"i/16867f75e536b678.jpg","out":"i/704781ccbf558932.jpg"},{"light":"Dresden station night","erp":"i/d0c81e9d1240b528.jpg","out":"i/3dc784c40bf0feff.jpg"},{"light":"The sky is on fire","erp":"i/06f973fe2d1b142a.jpg","out":"i/18ae080ecb9042f9.jpg"},{"light":"Neon photostudio","erp":"i/3daaf6976ee0baf4.jpg","out":"i/d4315c14ccb44a05.jpg"},{"light":"Colorful studio","erp":"i/0fd7dd53d0a60a98.jpg","out":"i/f1dde0ad71117c9f.jpg"},{"light":"Syferfontein 18d clear","erp":"i/88ccd91a36278a72.jpg","out":"i/07e4053bba0325aa.jpg"},{"light":"Venice sunset","erp":"i/cf25e62f7c363b27.jpg","out":"i/0b0f926fe3e5f6cd.jpg"},{"light":"Studio small 09","erp":"i/c17db45f880757ff.jpg","out":"i/fc5651ce46c720e7.jpg"},{"light":"Photo studio loft hall","erp":"i/3cc638e72b55cf64.jpg","out":"i/31e0d5ffc2cf7b08.jpg"},{"light":"Snowy field","erp":"i/f26790ab3a0fa1e6.jpg","out":"i/3dddc37bfc647ab3.jpg"},{"light":"Leadenhall market","erp":"i/fa252e11c7fcf5d9.jpg","out":"i/86365bd1ead4eaa3.jpg"},{"light":"Single sun, front","erp":"i/9e27e2f439b7340a.jpg","out":"i/ac2c28fdb0fe3dd6.jpg"},{"light":"Single sun, side","erp":"i/71c30cf389b25445.jpg","out":"i/57d39f389eaa6bec.jpg"},{"light":"Single sun, back","erp":"i/703f4efc7e9040cd.jpg","out":"i/765fb49e2b6cbf82.jpg"}]},{"id":"sphere-rough","name":"Sphere 3 of 4: rough steel (roughness 0.35)","note":"Crop from the four-sphere image. The four spheres were rendered and relit together in one image.","source":"i/a6d794967b6fa462.jpg","cases":[{"light":"Fireplace","erp":"i/e04fb24b6bc7eb07.jpg","out":"i/6152a202fce8e6b9.jpg"},{"light":"Cinema hall","erp":"i/68332ca65489eed3.jpg","out":"i/d595262f4c4d1180.jpg"},{"light":"Blue photo studio","erp":"i/337041a9e13f7251.jpg","out":"i/85b3aa0a2313d9e4.jpg"},{"light":"Brown photostudio 02","erp":"i/6a4b843043dd9903.jpg","out":"i/b97b5315261e2b62.jpg"},{"light":"Kloofendal overcast","erp":"i/9808046f533f367b.jpg","out":"i/48cdb740ee7f9c65.jpg"},{"light":"Satara night no lamps","erp":"i/16867f75e536b678.jpg","out":"i/99527e2e3385ffd7.jpg"},{"light":"Dresden station night","erp":"i/d0c81e9d1240b528.jpg","out":"i/f4fede362ff12924.jpg"},{"light":"The sky is on fire","erp":"i/06f973fe2d1b142a.jpg","out":"i/96c2adba798181c0.jpg"},{"light":"Neon photostudio","erp":"i/3daaf6976ee0baf4.jpg","out":"i/50374f5fe15316cf.jpg"},{"light":"Colorful studio","erp":"i/0fd7dd53d0a60a98.jpg","out":"i/ac50ef5a610a1cc1.jpg"},{"light":"Syferfontein 18d clear","erp":"i/88ccd91a36278a72.jpg","out":"i/b988854a8c21a714.jpg"},{"light":"Venice sunset","erp":"i/cf25e62f7c363b27.jpg","out":"i/8f38f139d8ceb589.jpg"},{"light":"Studio small 09","erp":"i/c17db45f880757ff.jpg","out":"i/e01493bd4a847ce3.jpg"},{"light":"Photo studio loft hall","erp":"i/3cc638e72b55cf64.jpg","out":"i/ef67c9ccbc13338b.jpg"},{"light":"Snowy field","erp":"i/f26790ab3a0fa1e6.jpg","out":"i/fc29bb5fcd58165e.jpg"},{"light":"Leadenhall market","erp":"i/fa252e11c7fcf5d9.jpg","out":"i/a9a8f8a54d3da35e.jpg"},{"light":"Single sun, front","erp":"i/9e27e2f439b7340a.jpg","out":"i/bf8573d0f1311b6c.jpg"},{"light":"Single sun, side","erp":"i/71c30cf389b25445.jpg","out":"i/88d1697b21222eb6.jpg"},{"light":"Single sun, back","erp":"i/703f4efc7e9040cd.jpg","out":"i/fa139912ede6d400.jpg"}]},{"id":"sphere-diffuse","name":"Sphere 4 of 4: diffuse reference (not metallic)","note":"Crop from the four-sphere image. The four spheres were rendered and relit together in one image.","source":"i/2f70324e65bea0d5.jpg","cases":[{"light":"Fireplace","erp":"i/e04fb24b6bc7eb07.jpg","out":"i/373072be48f61cbf.jpg"},{"light":"Cinema hall","erp":"i/68332ca65489eed3.jpg","out":"i/f7e4544ec5a94f52.jpg"},{"light":"Blue photo studio","erp":"i/337041a9e13f7251.jpg","out":"i/61af125f71297443.jpg"},{"light":"Brown photostudio 02","erp":"i/6a4b843043dd9903.jpg","out":"i/bbea3324118cf34a.jpg"},{"light":"Kloofendal overcast","erp":"i/9808046f533f367b.jpg","out":"i/0d580b841b95fed2.jpg"},{"light":"Satara night no lamps","erp":"i/16867f75e536b678.jpg","out":"i/6104a244778f1397.jpg"},{"light":"Dresden station night","erp":"i/d0c81e9d1240b528.jpg","out":"i/c1ddaee18ae2c204.jpg"},{"light":"The sky is on fire","erp":"i/06f973fe2d1b142a.jpg","out":"i/93f17809f0a5cc8d.jpg"},{"light":"Neon photostudio","erp":"i/3daaf6976ee0baf4.jpg","out":"i/6968d4a19dc8bcaf.jpg"},{"light":"Colorful studio","erp":"i/0fd7dd53d0a60a98.jpg","out":"i/5f5b7ff8c5384a36.jpg"},{"light":"Syferfontein 18d clear","erp":"i/88ccd91a36278a72.jpg","out":"i/036acb23a6dc9beb.jpg"},{"light":"Venice sunset","erp":"i/cf25e62f7c363b27.jpg","out":"i/cb3c3ad559e2bc92.jpg"},{"light":"Studio small 09","erp":"i/c17db45f880757ff.jpg","out":"i/f33a3083a0ab3482.jpg"},{"light":"Photo studio loft hall","erp":"i/3cc638e72b55cf64.jpg","out":"i/2d785f5f64fd0cfd.jpg"},{"light":"Snowy field","erp":"i/f26790ab3a0fa1e6.jpg","out":"i/703308f5cf8f206e.jpg"},{"light":"Leadenhall market","erp":"i/fa252e11c7fcf5d9.jpg","out":"i/75e6fe1ccea348a5.jpg"},{"light":"Single sun, front","erp":"i/9e27e2f439b7340a.jpg","out":"i/72e7c27c71f76637.jpg"},{"light":"Single sun, side","erp":"i/71c30cf389b25445.jpg","out":"i/1d5156d643ce3146.jpg"},{"light":"Single sun, back","erp":"i/703f4efc7e9040cd.jpg","out":"i/0f257c6724e1abf8.jpg"}]},{"id":"silver_monkey","name":"Silver monkey head","source":"i/d73fdd59e74d72f3.jpg","cases":[{"light":"Fireplace","erp":"i/e04fb24b6bc7eb07.jpg","out":"i/49b7c7b6f6385967.jpg"},{"light":"Cinema hall","erp":"i/68332ca65489eed3.jpg","out":"i/186f766a0c0c25c2.jpg"},{"light":"Blue photo studio","erp":"i/337041a9e13f7251.jpg","out":"i/964f5a268303b752.jpg"},{"light":"Brown photostudio 02","erp":"i/6a4b843043dd9903.jpg","out":"i/facccf72e45dd87a.jpg"},{"light":"Kloofendal overcast","erp":"i/9808046f533f367b.jpg","out":"i/8f7b282dd04eaba9.jpg"},{"light":"Satara night no lamps","erp":"i/16867f75e536b678.jpg","out":"i/9702e28a4dca1416.jpg"},{"light":"Dresden station night","erp":"i/d0c81e9d1240b528.jpg","out":"i/64e00b47159ea183.jpg"},{"light":"The sky is on fire","erp":"i/06f973fe2d1b142a.jpg","out":"i/a554c649d5390ed9.jpg"},{"light":"Neon photostudio","erp":"i/3daaf6976ee0baf4.jpg","out":"i/17c9f60ce82db8f1.jpg"},{"light":"Colorful studio","erp":"i/0fd7dd53d0a60a98.jpg","out":"i/4dcb2636747b29d7.jpg"},{"light":"Syferfontein 18d clear","erp":"i/88ccd91a36278a72.jpg","out":"i/eb3e1640728f96bc.jpg"},{"light":"Venice sunset","erp":"i/cf25e62f7c363b27.jpg","out":"i/136e65f9b38fe1de.jpg"},{"light":"Studio small 09","erp":"i/c17db45f880757ff.jpg","out":"i/c1e3c9b95cc7b6b0.jpg"},{"light":"Photo studio loft hall","erp":"i/3cc638e72b55cf64.jpg","out":"i/d3887ebd12dfc663.jpg"},{"light":"Snowy field","erp":"i/f26790ab3a0fa1e6.jpg","out":"i/bdce6e056ac65669.jpg"},{"light":"Leadenhall market","erp":"i/fa252e11c7fcf5d9.jpg","out":"i/583b6cf700e75b50.jpg"},{"light":"Single sun, front","erp":"i/9e27e2f439b7340a.jpg","out":"i/74bab89c41c2b011.jpg"},{"light":"Single sun, side","erp":"i/71c30cf389b25445.jpg","out":"i/c13e66c5887a791e.jpg"},{"light":"Single sun, back","erp":"i/703f4efc7e9040cd.jpg","out":"i/bb5aee7810e92c39.jpg"}]},{"id":"gold_torus","name":"Gold torus","source":"i/dd419d5112f59c0e.jpg","cases":[{"light":"Fireplace","erp":"i/e04fb24b6bc7eb07.jpg","out":"i/7594775be04f799f.jpg"},{"light":"Cinema hall","erp":"i/68332ca65489eed3.jpg","out":"i/f5723953d14a7249.jpg"},{"light":"Blue photo studio","erp":"i/337041a9e13f7251.jpg","out":"i/331817e07af6bcdd.jpg"},{"light":"Brown photostudio 02","erp":"i/6a4b843043dd9903.jpg","out":"i/e3b9aeb9ffbbbe4e.jpg"},{"light":"Kloofendal overcast","erp":"i/9808046f533f367b.jpg","out":"i/a0a4e54429363c5e.jpg"},{"light":"Satara night no lamps","erp":"i/16867f75e536b678.jpg","out":"i/0da69b95710c976d.jpg"},{"light":"Dresden station night","erp":"i/d0c81e9d1240b528.jpg","out":"i/973e4a351f6b8259.jpg"},{"light":"The sky is on fire","erp":"i/06f973fe2d1b142a.jpg","out":"i/e6c6d8915ca2966c.jpg"},{"light":"Neon photostudio","erp":"i/3daaf6976ee0baf4.jpg","out":"i/48a8825f63f774dc.jpg"},{"light":"Colorful studio","erp":"i/0fd7dd53d0a60a98.jpg","out":"i/cd700d0f04730a63.jpg"},{"light":"Syferfontein 18d clear","erp":"i/88ccd91a36278a72.jpg","out":"i/51d328c044c060ca.jpg"},{"light":"Venice sunset","erp":"i/cf25e62f7c363b27.jpg","out":"i/4bb16e00e0bb01fc.jpg"},{"light":"Studio small 09","erp":"i/c17db45f880757ff.jpg","out":"i/3d2fd604b4a9977b.jpg"},{"light":"Photo studio loft hall","erp":"i/3cc638e72b55cf64.jpg","out":"i/744be5f69cff0076.jpg"},{"light":"Snowy field","erp":"i/f26790ab3a0fa1e6.jpg","out":"i/9c4a73a9d2263622.jpg"},{"light":"Leadenhall market","erp":"i/fa252e11c7fcf5d9.jpg","out":"i/08ca508f1343db35.jpg"},{"light":"Single sun, front","erp":"i/9e27e2f439b7340a.jpg","out":"i/20902b54f00242c9.jpg"},{"light":"Single sun, side","erp":"i/71c30cf389b25445.jpg","out":"i/81eb8c9c8b115ab3.jpg"},{"light":"Single sun, back","erp":"i/703f4efc7e9040cd.jpg","out":"i/ddbf68d0ac68cd2d.jpg"}]},{"id":"copper_vase","name":"Copper vase","source":"i/cdcd7b9238557597.jpg","cases":[{"light":"Fireplace","erp":"i/e04fb24b6bc7eb07.jpg","out":"i/c5789013103bf280.jpg"},{"light":"Cinema hall","erp":"i/68332ca65489eed3.jpg","out":"i/014514a7cf168867.jpg"},{"light":"Blue photo studio","erp":"i/337041a9e13f7251.jpg","out":"i/cfac0d17169fdcb8.jpg"},{"light":"Brown photostudio 02","erp":"i/6a4b843043dd9903.jpg","out":"i/fd5f31db02c8e63f.jpg"},{"light":"Kloofendal overcast","erp":"i/9808046f533f367b.jpg","out":"i/d9ce5c945e191d1e.jpg"},{"light":"Satara night no lamps","erp":"i/16867f75e536b678.jpg","out":"i/6d7f3276b0071e5d.jpg"},{"light":"Dresden station night","erp":"i/d0c81e9d1240b528.jpg","out":"i/fbe0976eaf0404df.jpg"},{"light":"The sky is on fire","erp":"i/06f973fe2d1b142a.jpg","out":"i/ba7ae9bec2614dab.jpg"},{"light":"Neon photostudio","erp":"i/3daaf6976ee0baf4.jpg","out":"i/7fa9ecb6a8b6941d.jpg"},{"light":"Colorful studio","erp":"i/0fd7dd53d0a60a98.jpg","out":"i/c8f8dbd1e0a9b69a.jpg"},{"light":"Syferfontein 18d clear","erp":"i/88ccd91a36278a72.jpg","out":"i/2b693a4a5f052d8c.jpg"},{"light":"Venice sunset","erp":"i/cf25e62f7c363b27.jpg","out":"i/cd666362a0eab83d.jpg"},{"light":"Studio small 09","erp":"i/c17db45f880757ff.jpg","out":"i/290761337e9b5e7e.jpg"},{"light":"Photo studio loft hall","erp":"i/3cc638e72b55cf64.jpg","out":"i/273171f33e92c1ad.jpg"},{"light":"Snowy field","erp":"i/f26790ab3a0fa1e6.jpg","out":"i/f8314271aadb0ffe.jpg"},{"light":"Leadenhall market","erp":"i/fa252e11c7fcf5d9.jpg","out":"i/933caff5858ec55c.jpg"},{"light":"Single sun, front","erp":"i/9e27e2f439b7340a.jpg","out":"i/7fbfbabbeb3c9c5b.jpg"},{"light":"Single sun, side","erp":"i/71c30cf389b25445.jpg","out":"i/12c5b9b8c3334d07.jpg"},{"light":"Single sun, back","erp":"i/703f4efc7e9040cd.jpg","out":"i/a10b63304553bfea.jpg"}]},{"id":"faceted_chrome_gem","name":"Faceted chrome gem","source":"i/225bc61cfe8df891.jpg","cases":[{"light":"Fireplace","erp":"i/e04fb24b6bc7eb07.jpg","out":"i/ace67b907a45d935.jpg"},{"light":"Cinema hall","erp":"i/68332ca65489eed3.jpg","out":"i/a6e4374f75e838df.jpg"},{"light":"Blue photo studio","erp":"i/337041a9e13f7251.jpg","out":"i/ab505529310ed39d.jpg"},{"light":"Brown photostudio 02","erp":"i/6a4b843043dd9903.jpg","out":"i/30a6b730528f1425.jpg"},{"light":"Kloofendal overcast","erp":"i/9808046f533f367b.jpg","out":"i/5d8b3193403bba27.jpg"},{"light":"Satara night no lamps","erp":"i/16867f75e536b678.jpg","out":"i/2b6462b9f167a41d.jpg"},{"light":"Dresden station night","erp":"i/d0c81e9d1240b528.jpg","out":"i/8db9265ab0def168.jpg"},{"light":"The sky is on fire","erp":"i/06f973fe2d1b142a.jpg","out":"i/020816981c49bdb1.jpg"},{"light":"Neon photostudio","erp":"i/3daaf6976ee0baf4.jpg","out":"i/0d68c78fc760c56a.jpg"},{"light":"Colorful studio","erp":"i/0fd7dd53d0a60a98.jpg","out":"i/ec3e024a94bb2af1.jpg"},{"light":"Syferfontein 18d clear","erp":"i/88ccd91a36278a72.jpg","out":"i/2a1d2ef43bb2fd2e.jpg"},{"light":"Venice sunset","erp":"i/cf25e62f7c363b27.jpg","out":"i/e710fa82104d6666.jpg"},{"light":"Studio small 09","erp":"i/c17db45f880757ff.jpg","out":"i/3add4a5837123f3a.jpg"},{"light":"Photo studio loft hall","erp":"i/3cc638e72b55cf64.jpg","out":"i/33be42ff4117661b.jpg"},{"light":"Snowy field","erp":"i/f26790ab3a0fa1e6.jpg","out":"i/9354b73dc6c71280.jpg"},{"light":"Leadenhall market","erp":"i/fa252e11c7fcf5d9.jpg","out":"i/1c18d122fb8dae62.jpg"},{"light":"Single sun, front","erp":"i/9e27e2f439b7340a.jpg","out":"i/ce3de45eef545dc4.jpg"},{"light":"Single sun, side","erp":"i/71c30cf389b25445.jpg","out":"i/d2184c51766e2e29.jpg"},{"light":"Single sun, back","erp":"i/703f4efc7e9040cd.jpg","out":"i/c3becba52c1df5e2.jpg"}]},{"id":"steel_kettle","name":"Steel kettle","source":"i/8f4c86622c4c3250.jpg","cases":[{"light":"Fireplace","erp":"i/e04fb24b6bc7eb07.jpg","out":"i/2c90f80973e5bece.jpg"},{"light":"Cinema hall","erp":"i/68332ca65489eed3.jpg","out":"i/dcaad9cad80134a1.jpg"},{"light":"Blue photo studio","erp":"i/337041a9e13f7251.jpg","out":"i/b3de5144b7eee3ad.jpg"},{"light":"Brown photostudio 02","erp":"i/6a4b843043dd9903.jpg","out":"i/cd4ca5812c4ca545.jpg"},{"light":"Kloofendal overcast","erp":"i/9808046f533f367b.jpg","out":"i/46b03c920a2f1fb2.jpg"},{"light":"Satara night no lamps","erp":"i/16867f75e536b678.jpg","out":"i/be4993e4f7651553.jpg"},{"light":"Dresden station night","erp":"i/d0c81e9d1240b528.jpg","out":"i/d4134aef6dc9a6b2.jpg"},{"light":"The sky is on fire","erp":"i/06f973fe2d1b142a.jpg","out":"i/8a69fb8a4339cf33.jpg"},{"light":"Neon photostudio","erp":"i/3daaf6976ee0baf4.jpg","out":"i/cfb3ed80ad336c4f.jpg"},{"light":"Colorful studio","erp":"i/0fd7dd53d0a60a98.jpg","out":"i/a8aef47906d85a32.jpg"},{"light":"Syferfontein 18d clear","erp":"i/88ccd91a36278a72.jpg","out":"i/d85482ded0d5509d.jpg"},{"light":"Venice sunset","erp":"i/cf25e62f7c363b27.jpg","out":"i/12b97744192900e8.jpg"},{"light":"Studio small 09","erp":"i/c17db45f880757ff.jpg","out":"i/1ad14ba97f5d53cd.jpg"},{"light":"Photo studio loft hall","erp":"i/3cc638e72b55cf64.jpg","out":"i/c836452b96819971.jpg"},{"light":"Snowy field","erp":"i/f26790ab3a0fa1e6.jpg","out":"i/4fcc4481dd0a9969.jpg"},{"light":"Leadenhall market","erp":"i/fa252e11c7fcf5d9.jpg","out":"i/0b1e764b36835f89.jpg"},{"light":"Single sun, front","erp":"i/9e27e2f439b7340a.jpg","out":"i/1c4e4e4992b8d2f4.jpg"},{"light":"Single sun, side","erp":"i/71c30cf389b25445.jpg","out":"i/5f9c1e5a86ad0369.jpg"},{"light":"Single sun, back","erp":"i/703f4efc7e9040cd.jpg","out":"i/a1a2064b79133f63.jpg"}]},{"id":"brushed_aluminium_can","name":"Brushed aluminium can","source":"i/d4422a51a708f729.jpg","cases":[{"light":"Fireplace","erp":"i/e04fb24b6bc7eb07.jpg","out":"i/6ffe0618d95f260f.jpg"},{"light":"Cinema hall","erp":"i/68332ca65489eed3.jpg","out":"i/acff2fd588a901c4.jpg"},{"light":"Blue photo studio","erp":"i/337041a9e13f7251.jpg","out":"i/6b81f4ae36e6403d.jpg"},{"light":"Brown photostudio 02","erp":"i/6a4b843043dd9903.jpg","out":"i/0342fad3e993e52a.jpg"},{"light":"Kloofendal overcast","erp":"i/9808046f533f367b.jpg","out":"i/3f6d730deb55048f.jpg"},{"light":"Satara night no lamps","erp":"i/16867f75e536b678.jpg","out":"i/6698568e58a93778.jpg"},{"light":"Dresden station night","erp":"i/d0c81e9d1240b528.jpg","out":"i/7d9db209b1198288.jpg"},{"light":"The sky is on fire","erp":"i/06f973fe2d1b142a.jpg","out":"i/e77f54787e64de35.jpg"},{"light":"Neon photostudio","erp":"i/3daaf6976ee0baf4.jpg","out":"i/733c896a2d209083.jpg"},{"light":"Colorful studio","erp":"i/0fd7dd53d0a60a98.jpg","out":"i/610556042619b318.jpg"},{"light":"Syferfontein 18d clear","erp":"i/88ccd91a36278a72.jpg","out":"i/5cbf5a2112219ff8.jpg"},{"light":"Venice sunset","erp":"i/cf25e62f7c363b27.jpg","out":"i/339ae984f1f07f9e.jpg"},{"light":"Studio small 09","erp":"i/c17db45f880757ff.jpg","out":"i/ff41197c1a6ddd4c.jpg"},{"light":"Photo studio loft hall","erp":"i/3cc638e72b55cf64.jpg","out":"i/ba8f7b7fef13e801.jpg"},{"light":"Snowy field","erp":"i/f26790ab3a0fa1e6.jpg","out":"i/9ab22f570f808f9a.jpg"},{"light":"Leadenhall market","erp":"i/fa252e11c7fcf5d9.jpg","out":"i/3fcf5346158686de.jpg"},{"light":"Single sun, front","erp":"i/9e27e2f439b7340a.jpg","out":"i/b25999428fa3ffd7.jpg"},{"light":"Single sun, side","erp":"i/71c30cf389b25445.jpg","out":"i/5676b5ace958fad4.jpg"},{"light":"Single sun, back","erp":"i/703f4efc7e9040cd.jpg","out":"i/25305243d6009e54.jpg"}]}]}],"bounce":{"title":"Real captures with HDR ground truth","notes":["BounceBRDF (<a href=\"https://reality.tf.fau.de/publications/2026/iser2026highgloss/iser2026highgloss.html\" target=\"_blank\" rel=\"noopener\">Iser et al., 2026<\/a>) is a real HDR capture of high-gloss objects: 4 scenes photographed from a fixed camera under changing light, with a mirror ball in the frame. The first capture of each scene is the input; every other capture is a target (51 pairs). The target environment map is unwrapped from the mirror ball of the target capture.","Metrics are computed in linear HDR after aligning each prediction to the ground truth with one scalar gain, with the mirror ball and the calibration board excluded, and averaged with the 4 scenes weighted equally. Display: our output is shown with that gain at the exposure of the ground truth.","The yellow box marks the mirror ball. The boxed region is shown enlarged below each image, so that the reflection in our output can be compared with the ground truth. The metrics do not cover the mirror ball.","Three of the four scenes are shown below. In the fourth scene the mirror ball is cut off by the image border, so it is not shown; it is included in the metrics above."],"summary":{"all":{"pu21_psnr":32.07561735527024,"log2_rmse":0.5143036158592198},"top5":{"pu21_psnr":25.366133072547107,"log2_rmse":1.0902331113032826}},"scenes":[{"id":"arch1","index":1,"source":"i/442bc6f9720f0893.jpg","source_zoom":"i/f0c750c5bb0a9563.jpg","box":[0.0382,0.0,0.2526,0.2126],"cases":[{"erp":"i/8d536b364611c265.jpg","ours":"i/a9d3a8fdf3adf696.jpg","gt":"i/9897e239d265db72.jpg","ours_zoom":"i/4caa2d8855773d2d.jpg","gt_zoom":"i/699fc04bc7c91941.jpg","pu21_psnr":31.094931672855406,"log2_rmse":0.4416837778739384},{"erp":"i/1d0503dc4ed24d41.jpg","ours":"i/9b8481c64ad42590.jpg","gt":"i/afabe81c6225b5bc.jpg","ours_zoom":"i/4758cbfa379708ce.jpg","gt_zoom":"i/3ca646174aeab60d.jpg","pu21_psnr":30.933716361557284,"log2_rmse":0.4452128774746761},{"erp":"i/87c9e5f3cf4254fb.jpg","ours":"i/bc114be7f1d4345e.jpg","gt":"i/73747f8828c5584d.jpg","ours_zoom":"i/f0657cab85ea8890.jpg","gt_zoom":"i/b0f5b2bf944c6dad.jpg","pu21_psnr":30.18257141766608,"log2_rmse":0.4890643530953266},{"erp":"i/7ea0dd13964c5ff4.jpg","ours":"i/981837e862a187d3.jpg","gt":"i/5b9c89281b465bd5.jpg","ours_zoom":"i/fca94a662c551202.jpg","gt_zoom":"i/5eaa9a48512263c2.jpg","pu21_psnr":28.79090254950936,"log2_rmse":0.5808363869528862},{"erp":"i/1ca29310fddc3ebd.jpg","ours":"i/c304e2194c9c91c4.jpg","gt":"i/e3a48ed84d2c5a1c.jpg","ours_zoom":"i/1231b1c0d6c6f654.jpg","gt_zoom":"i/8cc6e0ea4f8e3434.jpg","pu21_psnr":28.754775033087085,"log2_rmse":0.5863444119108758},{"erp":"i/7659fecbe8075b6f.jpg","ours":"i/471098e0b250f5d7.jpg","gt":"i/0e8cf7299d52bcee.jpg","ours_zoom":"i/edd413f2bbc8941d.jpg","gt_zoom":"i/c73f4855f677616c.jpg","pu21_psnr":28.045798838694658,"log2_rmse":0.6392015296515016},{"erp":"i/5fd3afb65a406607.jpg","ours":"i/65ee674017f05ee0.jpg","gt":"i/4db8f0b9591c72aa.jpg","ours_zoom":"i/82055c426eeb984c.jpg","gt_zoom":"i/1559e06f7568c27a.jpg","pu21_psnr":28.14342196990054,"log2_rmse":0.6305229478617278},{"erp":"i/3a7ae33a300b9ee1.jpg","ours":"i/10c4bb9471e35614.jpg","gt":"i/1bddb488e9cd223d.jpg","ours_zoom":"i/05aa076a29b90a7e.jpg","gt_zoom":"i/f82a38c01fa4cf07.jpg","pu21_psnr":29.559875731630164,"log2_rmse":0.5256627395799135},{"erp":"i/acdf610303f50d48.jpg","ours":"i/8cf7d275398ae2ce.jpg","gt":"i/d971ed1f8516e993.jpg","ours_zoom":"i/dd2d30335167c005.jpg","gt_zoom":"i/64abef8e2c213b18.jpg","pu21_psnr":29.19225988906273,"log2_rmse":0.5410362369216329},{"erp":"i/256955b73598f008.jpg","ours":"i/9c73431f0158c444.jpg","gt":"i/2edd44a4a7c87a3a.jpg","ours_zoom":"i/6fd1d0c3298fe463.jpg","gt_zoom":"i/1c9d18494df695a5.jpg","pu21_psnr":29.18974649806478,"log2_rmse":0.545447219335056},{"erp":"i/07f065aa102859ff.jpg","ours":"i/6083d3341aefe67d.jpg","gt":"i/b840dbc7daf357ee.jpg","ours_zoom":"i/9840d928df3bdaf0.jpg","gt_zoom":"i/dcc33442018cd740.jpg","pu21_psnr":27.373836623092302,"log2_rmse":0.6926691856764056},{"erp":"i/5a9b9433880c954d.jpg","ours":"i/46586b3922466509.jpg","gt":"i/110b326af7e77d4a.jpg","ours_zoom":"i/349a6285efc30c61.jpg","gt_zoom":"i/9a6ab71477d934a3.jpg","pu21_psnr":30.091486279978966,"log2_rmse":0.4934679328745382},{"erp":"i/4765b816636296c3.jpg","ours":"i/0c642d36773aea7c.jpg","gt":"i/340f10678c78d742.jpg","ours_zoom":"i/e1c16898b69d143e.jpg","gt_zoom":"i/f7b516c53d214f64.jpg","pu21_psnr":30.51526591046105,"log2_rmse":0.4761599180780468}]},{"id":"re2","index":2,"source":"i/f2e8574c52d2daf8.jpg","source_zoom":"i/0eb7b810fa109a02.jpg","box":[0.1693,0.2031,0.3001,0.334],"cases":[{"erp":"i/d8807658188a6898.jpg","ours":"i/b3cf74eca59dbf38.jpg","gt":"i/2b293aa2005f3c45.jpg","ours_zoom":"i/a7ca1071760acb11.jpg","gt_zoom":"i/10bccb6a4afbca88.jpg","pu21_psnr":32.95576281344974,"log2_rmse":0.3812393424189052},{"erp":"i/785289dbdfc519b5.jpg","ours":"i/1c8c072c1f60a63a.jpg","gt":"i/93703bc54a5ece46.jpg","ours_zoom":"i/34e0d1c1ce7ea93e.jpg","gt_zoom":"i/fef18ec61d200a08.jpg","pu21_psnr":32.73622604190514,"log2_rmse":0.4844043460958698},{"erp":"i/7d3137d470ea9fe1.jpg","ours":"i/1c448a0828730ff2.jpg","gt":"i/49867e942002cab8.jpg","ours_zoom":"i/0e90b47cc69c1622.jpg","gt_zoom":"i/1d5b96f5a34df08e.jpg","pu21_psnr":32.742804447976646,"log2_rmse":0.4568047255693111},{"erp":"i/34ca7ba659160b73.jpg","ours":"i/e7972b27e545e140.jpg","gt":"i/e2900da95f71aa39.jpg","ours_zoom":"i/1c75b64481bec193.jpg","gt_zoom":"i/79dab13e38143efa.jpg","pu21_psnr":32.3636733702618,"log2_rmse":0.4744198432855279},{"erp":"i/cffe23e3316bf397.jpg","ours":"i/b49f73893e126bae.jpg","gt":"i/e8f206865ba3fe4c.jpg","ours_zoom":"i/e8619472e6048b03.jpg","gt_zoom":"i/180ee649e10ab04c.jpg","pu21_psnr":32.83394851071692,"log2_rmse":0.36718917042061616},{"erp":"i/57fbeea797e7e02a.jpg","ours":"i/b98232970c35d60c.jpg","gt":"i/c665d0cbb122147b.jpg","ours_zoom":"i/07f509261b249fce.jpg","gt_zoom":"i/13f28b8181a80a64.jpg","pu21_psnr":32.75090600634212,"log2_rmse":0.37577370764119455},{"erp":"i/5cd6e6d3645f2e45.jpg","ours":"i/d0fec90147dd91fe.jpg","gt":"i/2cbe8c3d9b04d7f2.jpg","ours_zoom":"i/ae3992c0805347ca.jpg","gt_zoom":"i/4f9ed89f2a63306d.jpg","pu21_psnr":31.982611307519747,"log2_rmse":0.41661909047008094},{"erp":"i/e664112c9fd218a6.jpg","ours":"i/c5ca394745940113.jpg","gt":"i/8a6db7d15a6fe086.jpg","ours_zoom":"i/17b0e4bfceafb935.jpg","gt_zoom":"i/82b2f2d29fecee15.jpg","pu21_psnr":32.77327721773863,"log2_rmse":0.35955020469504834},{"erp":"i/1a47751d29c176ff.jpg","ours":"i/042256199c469091.jpg","gt":"i/d3d371daa4ea93b6.jpg","ours_zoom":"i/df4321913a1962b2.jpg","gt_zoom":"i/9bb7c741b9dacbaf.jpg","pu21_psnr":32.77393360257082,"log2_rmse":0.4238753218934171},{"erp":"i/d62a549f23fb2a0b.jpg","ours":"i/d46186ad3dd710c7.jpg","gt":"i/c7e91870107b9131.jpg","ours_zoom":"i/d5fa3efa970bf55d.jpg","gt_zoom":"i/4332f41e3347c409.jpg","pu21_psnr":32.817236618907735,"log2_rmse":0.4032047862692148},{"erp":"i/857b247a5d5146e3.jpg","ours":"i/4fe12789e31cea07.jpg","gt":"i/4e84e14dddee455a.jpg","ours_zoom":"i/c3f331585138199f.jpg","gt_zoom":"i/ccc3325474119a47.jpg","pu21_psnr":33.35361424164394,"log2_rmse":0.361065470396486},{"erp":"i/a868c8453ca105c5.jpg","ours":"i/aca64170f40f8173.jpg","gt":"i/4f92b24e9453f3ed.jpg","ours_zoom":"i/938d420849187989.jpg","gt_zoom":"i/1f9b753379e4ac43.jpg","pu21_psnr":33.80956200764245,"log2_rmse":0.33733869805739297},{"erp":"i/c0de84bee8c15ff5.jpg","ours":"i/a0840aea6a0b0913.jpg","gt":"i/471ee7357046341c.jpg","ours_zoom":"i/3c42aea13291deaa.jpg","gt_zoom":"i/050180269c727e76.jpg","pu21_psnr":33.10241621310355,"log2_rmse":0.39597000322286063},{"erp":"i/16fb6db332bb39c6.jpg","ours":"i/28fbd32615691623.jpg","gt":"i/79fefee55bb18ca5.jpg","ours_zoom":"i/c4b2fd7870fd18e9.jpg","gt_zoom":"i/4c18a4d6291b3c84.jpg","pu21_psnr":32.8785186129116,"log2_rmse":0.45470364821354986}]},{"id":"vr1","index":3,"source":"i/5effda6d93586f37.jpg","source_zoom":"i/3c29babe1cbbae9b.jpg","box":[0.1444,0.0745,0.3507,0.2808],"cases":[{"erp":"i/17df2e19128aabcb.jpg","ours":"i/6d223627edcb6f94.jpg","gt":"i/be6603a45923e1b1.jpg","ours_zoom":"i/0fe2d9bcf12982ff.jpg","gt_zoom":"i/4e6969b736679309.jpg","pu21_psnr":35.05412532147952,"log2_rmse":0.3176886647261112},{"erp":"i/865d9ce1b5f021d2.jpg","ours":"i/294a4a5fde5e2b13.jpg","gt":"i/b6ccbb3db226055d.jpg","ours_zoom":"i/01bb13a4ae356c8e.jpg","gt_zoom":"i/658b162c772558a0.jpg","pu21_psnr":32.98374503945213,"log2_rmse":0.39860330681513684},{"erp":"i/82640e3723763101.jpg","ours":"i/ef5519764d6d8040.jpg","gt":"i/30c83749d24c16a0.jpg","ours_zoom":"i/80ebdf638d131fb8.jpg","gt_zoom":"i/cf51e9cbe9a3a6d6.jpg","pu21_psnr":32.18243686509561,"log2_rmse":0.4016930394131216},{"erp":"i/25ec48ece25a96d6.jpg","ours":"i/b3b17ef4de7b09d5.jpg","gt":"i/5fac0cf80fd821ed.jpg","ours_zoom":"i/648dd74628eaabc5.jpg","gt_zoom":"i/cdf2002b83dce230.jpg","pu21_psnr":32.317371401179656,"log2_rmse":0.4197339554900341},{"erp":"i/d675db81c14849f2.jpg","ours":"i/0f5f00303057ab6d.jpg","gt":"i/4d66b7084cc8c5c9.jpg","ours_zoom":"i/e38ae6cc8d67112a.jpg","gt_zoom":"i/ab27910546d58249.jpg","pu21_psnr":34.47722049521425,"log2_rmse":0.34148230289929254},{"erp":"i/4ce7068d65aabcc7.jpg","ours":"i/359634d2df5d1c87.jpg","gt":"i/2c4462f6d63337ee.jpg","ours_zoom":"i/ed953820666f324b.jpg","gt_zoom":"i/d21606371c9ea16c.jpg","pu21_psnr":33.06442602772822,"log2_rmse":0.4062828976944888},{"erp":"i/39983b726bba990a.jpg","ours":"i/3eb5e1c17d6f0f3b.jpg","gt":"i/3f00129075b0fc93.jpg","ours_zoom":"i/7654e6c9fdd1a834.jpg","gt_zoom":"i/abf9374d75b59e71.jpg","pu21_psnr":32.58858218625174,"log2_rmse":0.42096475190393695},{"erp":"i/ae915bf325fba3f9.jpg","ours":"i/99de40a615510878.jpg","gt":"i/180f7e750d81f6d7.jpg","ours_zoom":"i/534685d9c483614d.jpg","gt_zoom":"i/be0b8bc7820bf18b.jpg","pu21_psnr":33.75693904060201,"log2_rmse":0.36837324587241904},{"erp":"i/71d0e697e61f02b5.jpg","ours":"i/d674281ae633cecf.jpg","gt":"i/31d9c31ff7ce5fc0.jpg","ours_zoom":"i/f01fb5f0110e78ea.jpg","gt_zoom":"i/ebf8ad65cf450636.jpg","pu21_psnr":34.32435468592565,"log2_rmse":0.34927733267089794},{"erp":"i/02e86e9f888e693b.jpg","ours":"i/f7868b9cfd8ac880.jpg","gt":"i/3e197d9ba818ba31.jpg","ours_zoom":"i/5837a710a7e9799f.jpg","gt_zoom":"i/c3d4ceee2e641ddb.jpg","pu21_psnr":32.94250620766626,"log2_rmse":0.3936508231953477},{"erp":"i/9b2b98ec63eb8d0f.jpg","ours":"i/ea6b0956f7db622f.jpg","gt":"i/b891edbd363b8877.jpg","ours_zoom":"i/70bbab97ce7acda7.jpg","gt_zoom":"i/e7f870243116d233.jpg","pu21_psnr":36.42099572952547,"log2_rmse":0.27388011862822315}]}]}};
+const CHIP = "";
+function tile(caption, ...pics) {
+  const t = el("div", "tile");
+  t.append(...pics);
+  if (caption) t.append(caption);
+  return t;
+}
+function erp(src, alt) { const p = pic(src, alt, [["Target lighting", CHIP]]); p.classList.add("erp"); return p; }
+function cap(html) { const c = el("div", "cap"); c.innerHTML = html; return c; }
+function boxed(p, b) {
+  const d = el("div", "boxmark");
+  d.style.cssText = `left:${b[0] * 100}%;top:${b[1] * 100}%;width:${(b[2] - b[0]) * 100}%;height:${(b[3] - b[1]) * 100}%`;
+  p.append(d);
+  p.classList.add("has-box");
+  return p;
+}
+function zoom(src, alt) { const p = pic(src, alt + ", mirror ball enlarged", [["Mirror ball, enlarged", CHIP]]); p.classList.add("zoom"); return p; }
+function objBlock(id, title, note, source, tiles, gt, box, sourceZoom) {
+  const o = el("div", "obj"); o.id = id;
+  o.append(el("h3", null, title));
+  const inp = el("div", "input");
+  const src = pic(source, "Input", [["Input", CHIP]]);
+  inp.append(box ? boxed(src, box) : src);
+  if (sourceZoom) inp.append(zoom(sourceZoom, "Input"));
+  if (note) inp.append(cap(note));
+  const grid = el("div", gt ? "tiles gt" : "tiles");
+  grid.append(...tiles);
+  o.append(inp, grid);
+  return o;
+}
+function part(id, title, notes) {
+  const s = el("section", "part"); s.id = id;
+  s.append(el("h2", null, title));
+  for (const n of notes) { const p = el("p", "note"); p.innerHTML = n; s.append(p); }
+  tocLink(id, title);
+  return s;
+}
+
+const out = [];
+for (const g of D.groups) {
+  const s = part(g.id, g.title, g.notes);
+  for (const o of g.objects) {
+    const tiles = o.cases.map(c => tile(cap(c.light),
+      erp(c.erp, "Target lighting: " + c.light),
+      pic(c.out, "Our output under " + c.light, [["Our output", CHIP]])));
+    s.append(objBlock(`${g.id}-${o.id}`, `${o.name} (${o.cases.length} lighting conditions)`, o.note, o.source, tiles, false));
+  }
+  out.push(s);
+}
+
+const B = D.bounce;
+const sb = part("real-gt", B.title, B.notes);
+sb.append(table(
+  ["Pixels scored", "PU21-PSNR (dB) ↑", "log2 RMSE (stops) ↓"],
+  [["All pixels", f(B.summary.all.pu21_psnr), f(B.summary.all.log2_rmse)],
+   ["Brightest 5% of each ground-truth image", f(B.summary.top5.pu21_psnr), f(B.summary.top5.log2_rmse)]]));
+for (const sc of B.scenes) {
+  const tiles = sc.cases.map(c => {
+    const pair = el("div", "pair");
+    pair.append(boxed(pic(c.ours, "Our output", [["Our output", CHIP]]), sc.box),
+      boxed(pic(c.gt, "Ground truth", [["Ground truth", CHIP]]), sc.box));
+    const zooms = el("div", "pair");
+    zooms.append(zoom(c.ours_zoom, "Our output"), zoom(c.gt_zoom, "Ground truth"));
+    return tile(cap(`PU21-PSNR <b>${f(c.pu21_psnr, 1)} dB</b> · log2 RMSE <b>${f(c.log2_rmse)}</b> stops`),
+      erp(c.erp, "Target lighting"), pair, zooms);
+  });
+  sb.append(objBlock(`real-gt-${sc.id}`, `Scene ${sc.index} (${sc.cases.length} target lightings)`, null, sc.source, tiles, true, sc.box, sc.source_zoom));
+}
+out.push(sb);
+$("sections").replaceWith(...out);
+</script>
+</body>
+</html>
