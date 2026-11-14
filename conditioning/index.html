@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="referrer" content="no-referrer"><meta name="robots" content="noindex,nofollow,noarchive">
+<title>Lighting Conditioning Comparison</title>
+<style>
+/* Layout: one column for reviewers. Setup, then the comparisons by photograph, then by lighting.
+   Each group: a short text and its rows; an outline marks the results the text discusses. */
+:root {
+  --bg: #f4f4f2; --panel: #ffffff; --ink: #17181b; --muted: #5d616a; --line: #d9dad6;
+  --accent: #b36b00; --tile-bg: #e6e6e3; --shade: rgba(10, 11, 13, 0.93); --mark: #d4380d;
+  --ours: #2f7a74; --enc: #7a4cc2; --cat: #b1361e; --ded: #0f8a5f; --plus: #1f6feb;
+  --font-ui: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+  --step--1: 0.8rem; --step-0: 0.95rem; --step-1: 1.15rem; --step-2: 1.6rem;
+  color-scheme: light;
+  padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #111215; --panel: #191a1e; --ink: #ecebe7; --muted: #9a9ca3; --line: #2b2d33;
+    --accent: #f0a429; --tile-bg: #1f2025; --mark: #ff5c38;
+    --ours: #7fcdc5; --enc: #b996ff; --cat: #ff8a6b; --ded: #45c79a; --plus: #6ea8ff;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-ui); font-size: var(--step-0); line-height: 1.55;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 20px 64px; }
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+button { font: inherit; color: inherit; }
+button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.wrap { max-width: 1400px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr); gap: 22px; }
+h1, h2, h3 { margin: 0; text-wrap: balance; }
+h1 { font-size: var(--step-2); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: var(--step-1); font-weight: 700; }
+h3 { font-size: var(--step-0); font-weight: 700; display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.part { margin-top: 10px; padding-top: 14px; border-top: 2px solid var(--ink); display: grid; gap: 4px; }
+p { margin: 0; max-width: 86ch; }
+.muted { color: var(--muted); }
+.small { font-size: var(--step--1); }
+.bar { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+.tabs { display: inline-flex; gap: 4px; padding: 3px; background: var(--panel); border: 1px solid var(--line); border-radius: 9px; }
+.tabs button { border: 0; background: transparent; color: var(--muted); padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: var(--step--1); }
+.tabs button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: grid; gap: 10px; min-width: 0; }
+.variants { margin: 0; padding-left: 20px; display: grid; gap: 4px; max-width: 90ch; }
+.tbl { overflow-x: auto; }
+table { border-collapse: collapse; font-size: var(--step--1); }
+th, td { padding: 5px 14px 5px 0; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
+td.num, th.num { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+th { color: var(--muted); font-weight: 600; }
+.legend { display: inline-flex; gap: 6px; align-items: center; font-size: var(--step--1); color: var(--muted); }
+.legend i { display: inline-block; width: 18px; height: 14px; border: 3px solid var(--mark); border-radius: 3px; }
+.sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; flex: none; }
+.grid-scroll { overflow-x: auto; padding: 4px; margin: -4px; }
+.grid { display: grid; grid-template-columns: minmax(110px, 0.8fr) repeat(7, minmax(104px, 1fr)); gap: 8px; align-items: start; min-width: 900px; }
+.hd { font-size: 0.76rem; display: flex; gap: 5px; align-items: flex-end; font-weight: 600; line-height: 1.25; }
+.lab { font-size: var(--step--1); font-weight: 600; }
+.tile { display: block; border: 0; padding: 0; background: none; cursor: zoom-in; min-width: 0; border-radius: 6px; }
+.tile.mark { outline: 3px solid var(--mark); outline-offset: 1px; }
+.crop { position: relative; overflow: hidden; background: var(--tile-bg); border-radius: 5px; width: 100%; }
+.crop.sq { aspect-ratio: 1 / 1; }
+.crop.env { aspect-ratio: 2 / 1; }
+.crop img { position: absolute; left: 0; top: 0; max-width: none; display: block; }
+.envcell { aspect-ratio: 1 / 1; display: grid; align-content: center; background: var(--tile-bg); border-radius: 5px; overflow: hidden; }
+.lb { position: fixed; inset: 0; background: var(--shade); z-index: 50; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 8px; color: #ecebe7;
+  padding: calc(env(safe-area-inset-top, 0px) + 10px) max(12px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 10px) max(12px, env(safe-area-inset-left, 0px)); }
+.lb-top { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; justify-content: space-between; font-size: var(--step--1); }
+.lb-stage { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 8px; min-height: 0; }
+.lb-view { position: relative; height: 100%; min-height: 0; display: grid; place-items: center; }
+.lb-view .crop { width: min(100%, calc(100vh - 200px)); }
+.lb-full { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(100%, calc(100vh - 200px)); max-width: none; aspect-ratio: 1 / 1; object-fit: contain; opacity: 0; border-radius: 5px; }
+.lb-full.ok { opacity: 1; }
+.lb-nav, .lb-btn { border: 1px solid #3a3c42; background: #1d1f24; color: #ecebe7; border-radius: 8px; cursor: pointer; }
+.lb-btn { padding: 5px 12px; font-size: var(--step--1); }
+.lb-nav { width: 40px; height: 64px; font-size: 1.4rem; }
+.lb-strip { display: flex; gap: 6px; overflow-x: auto; justify-content: center; }
+.lb-strip button { flex: none; width: 84px; border: 2px solid transparent; background: none; padding: 0; border-radius: 6px; cursor: pointer; display: grid; gap: 2px; color: #ecebe7; font-size: 0.66rem; }
+.lb-strip button[aria-current="true"] { border-color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header style="display:grid; gap:8px">
+    <h1>Same-backbone comparison of lighting conditioning</h1>
+    <p class="muted">Results on real photographs, which are far from the synthetic fine-tuning data. All results are 2048 × 2048; click an image to enlarge it.</p>
+    <div class="bar">
+      <span class="muted small">Display:</span><span class="tabs" id="disp-tabs"></span>
+      <span class="legend"><i></i>results discussed in the text</span>
+    </div>
+  </header>
+
+  <section class="card">
+    <h2>Setup</h2>
+    <p>All variants use the same backbone (HiDream-O1-Image, 8B), the same fine-tuning data and the same 2048² resolution, with similar training compute (about 400 GPU-hours each). They differ only in whether the target lighting keeps the two pretrained image-conditioning pathways of the base model.</p>
+    <ul class="variants" id="variants"></ul>
+    <div class="tbl"><table id="scores"></table></div>
+    <p class="muted small">Internal synthetic benchmark (170 held-out pairs), same protocol as our ablations. On this in-distribution benchmark, all variants except channel concatenation give reasonable results, although none reaches the pretrained pathways. Channel concatenation is much worse even here. A possible reason is that this design was developed for latent diffusion models, whose architecture differs from our pixel-space backbone, so it should not simply be copied to it. The clear differences appear on the real photographs below.</p>
+  </section>
+
+  <section class="card">
+    <h2>Summary</h2>
+    <p id="summary"></p>
+  </section>
+
+  <div id="groups" style="display:grid; gap:22px"></div>
+</div>
+
+<div class="lb" id="lb" hidden role="dialog" aria-modal="true">
+  <div class="lb-top"><span id="lb-title"></span><span class="muted" id="lb-res"></span><button class="lb-btn" type="button" id="lb-close">Close</button></div>
+  <div class="lb-stage">
+    <button class="lb-nav" type="button" id="lb-prev" aria-label="Previous column">‹</button>
+    <div class="lb-view" id="lb-view"></div>
+    <button class="lb-nav" type="button" id="lb-next" aria-label="Next column">›</button>
+  </div>
+  <div class="lb-strip" id="lb-strip"></div>
+</div>
+
+<script>
+"use strict";
+// Columns, named as in the written response. col: column in the sheet of each photograph.
+const COLS = [
+  { k: "input", name: "Input" },
+  { k: "env", name: "Target lighting" },
+  { k: "ours", name: "Ours", col: 0, key: "ours", tag: "pretrained pathways kept",
+    text: "The lighting is given as three lighting maps, represented as images. They pass through the two pathways exactly as an input image does in the base model: Visual tokens from the frozen visual encoder, and raw pixel patches. Nothing is replaced and no module is added." },
+  { k: "enc", name: "New encoder", col: 1, key: "enc", tag: "one pathway changed",
+    text: "The frozen visual encoder that produces the Visual tokens of the lighting is replaced by another pretrained encoder, the Cosmos tokenizer." },
+  { k: "cat", name: "Channel concatenation", col: 2, key: "cat", tag: "pretrained pathways not used",
+    text: "The alternative named by Reviewer W7g2, following IC-Light and Neural Gaffer. The lighting no longer passes through the pretrained pathways; it is encoded by a VAE and concatenated to the image input as extra channels." },
+  { k: "ded", name: "Dedicated lighting encoder", col: 3, key: "ded", tag: "pretrained pathways not used",
+    text: "The lighting no longer passes through the pretrained pathways; it enters through the environment encoder of DiffusionRenderer and new cross-attention layers." },
+  { k: "plus", name: "Ours + dedicated lighting encoder", col: 4, key: "plus", tag: "pretrained pathways kept, new module added",
+    text: "The lighting passes through both pretrained pathways as in Ours, and the dedicated lighting encoder with its cross-attention layers is added in parallel." }
+];
+const COL = Object.fromEntries(COLS.map(c => [c.k, c]));
+const SCORES = { ours: [22.09, 0.777, 0.166], enc: [19.61, 0.727, 0.189], cat: [12.83, 0.540, 0.311], ded: [20.23, 0.727, 0.189], plus: [21.70, 0.757, 0.172] };
+const PHOTO = { "c01-s01": "Portrait with earrings", "c01-s02": "Portrait with glasses", "c02-s01": "Red fox", "c02-s02": "Tabby cat", "c04-s01": "Dahlia",
+  "c05-s02": "Strawberries", "c06-s02": "Porcelain vase", "c07-s02": "Pocket watch", "c11-s01": "Conifer forest", "c11-s02": "Forest path",
+  "c12-s02": "Gothic cathedral", "p-extra-01": "Portrait with raised hand", "p-extra-02": "Portrait with sunglasses" };
+const LIGHT = { front: "Sun in front", side: "Sun at the side", back: "Sun behind", ferndale_studio_12: "Ferndale Studio 12", ferndale_studio_02: "Ferndale Studio 02",
+  the_sky_is_on_fire: "The Sky Is On Fire", cinema_hall: "Cinema Hall", kloofendal_overcast: "Kloofendal Overcast" };
+const F12 = "ferndale_studio_12", F02 = "ferndale_studio_02";
+
+// Text of each group.
+const SUMMARY = "Replacing the lighting encoder makes the results worse. Channel concatenation fails completely. The dedicated lighting encoder gives acceptable results in some cases, but its response to the lighting is limited to the color of large areas of the environment: intense lights, such as a green or an orange lamp, have no effect, and it becomes much worse on out-of-distribution inputs. Adding the dedicated encoder to our pathways also makes the results worse than our pathways alone, which is why we do not add new pathways.";
+const BY_PHOTO = [
+  ["c11-s02", "This scene is far out of distribution. Only our pretrained pathways give a result that looks plausible. Channel concatenation and the new encoder change almost only the color; the shadows never change. With the dedicated lighting encoder, alone or added to our pathways, the shading of the trees is badly wrong."],
+  ["c01-s01", "Channel concatenation barely changes the shading. The dedicated lighting encoder reproduces only the color of the environment map and ignores its brightness. With the new encoder, the green fluorescent light of Ferndale Studio 12 and the orange light of Ferndale Studio 02 have very little effect, and under Cinema Hall the face looks as if a strong point light were shining on it, which the environment does not contain. Adding the dedicated encoder to our pathways greatly increases the leakage of the environment into the background and weakens the response to the green and orange lights."],
+  ["c01-s02", "Under the three sun directions, our pathways, our pathways with the dedicated encoder added, and the dedicated encoder alone all give acceptable results, whereas the new encoder makes many errors. Under Ferndale Studio 12 and Ferndale Studio 02, the dedicated encoder follows only the rough color of the environment, and adding it to our pathways weakens the response to the green and orange lights."],
+  ["c02-s01", "The same behavior on another subject."],
+  ["c12-s02", "The dedicated lighting encoder often does not respond correctly when the light is rotated."],
+  ["p-extra-01", "Adding the dedicated lighting encoder to our pathways gives visibly worse shadows and lighting than our pathways alone, especially with the sun at the side and under Ferndale Studio 12."],
+  ["p-extra-02", "Further examples."]
+];
+const BY_LIGHT = [
+  [F02, "This environment shows how each variant responds to the lighting. The dedicated lighting encoder follows only the color of the large areas of the environment. The new encoder, and our pathways with the dedicated encoder added, weaken lights that are small but intense, such as the orange lamp on the left of the environment map. Adding the dedicated encoder to our pathways also leaks the environment into the background. With the new encoder, some objects, such as the dahlia and the porcelain vase, do not take the color of the light at all."],
+  [F12, "The same behavior as above. The point to look at is the response to the green fluorescent light."],
+  ["side", "The sun is at the side. The point to look at is whether each variant produces plausible shadows."]
+];
+// Outlines: only the cells (photo, lighting, column) that the comments name.
+const MARKS = {
+  "c01-s01": { [F12]: ["enc", "plus"], [F02]: ["enc", "plus"], cinema_hall: ["enc"] },
+  "c01-s02": { front: ["enc"], side: ["enc"], back: ["enc"], [F12]: ["ded", "plus"], [F02]: ["ded", "plus"] },
+  "c12-s02": { front: ["ded"], side: ["ded"], back: ["ded"] },
+  "p-extra-01": { side: ["plus"], [F12]: ["plus"] },
+  "c04-s01": { [F02]: ["enc"] },
+  "c06-s02": { [F02]: ["enc"] }
+};
+const marked = (s, l, k) => ((MARKS[s] || {})[l] || []).includes(k);
+
+const state = { disp: "ev0" };
+try { Object.assign(state, JSON.parse(localStorage.getItem("conditioning-display") || "{}")); } catch (e) {}
+const save = () => { try { localStorage.setItem("conditioning-display", JSON.stringify(state)); } catch (e) {} };
+let ATLAS = null, PICKS = [];
+
+function crop(src, col, row, cols, rows, cls) {
+  const box = document.createElement("div"); box.className = "crop " + cls;
+  const img = document.createElement("img"); img.src = src; img.loading = "lazy"; img.decoding = "async"; img.alt = "";
+  img.style.width = cols * 100 + "%"; img.style.transform = `translate(${-col * 100 / cols}%, ${-row * 100 / rows}%)`;
+  box.appendChild(img); return box;
+}
+function tileNode(src, light, k) {
+  if (k === "input") return crop("img/inputs.jpg", 0, ATLAS.sources.indexOf(src), 1, ATLAS.sources.length, "sq");
+  if (k === "env") { const c = document.createElement("div"); c.className = "envcell";
+    c.appendChild(crop("img/env.jpg", 0, ATLAS.lights.indexOf(light), 1, ATLAS.lights.length, "env")); return c; }
+  const rows = ATLAS.rows[src], r = rows.indexOf(light);
+  return crop(`img/${state.disp}/${src}.jpg`, COL[k].col, r, 5, rows.length, "sq");
+}
+function fullUrl(src, light, k) {
+  if (k === "input") return `full/input/${src}.jpg`;
+  if (k === "env") return null;
+  return `full/${state.disp}/${COL[k].key}/${src}-${light}.jpg`;
+}
+const sw = k => (COL[k].key ? `<span class="sw" style="background:var(--${k})"></span>` : "");
+const esc = s => s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function group(title, text, rows, label) {
+  const sec = document.createElement("section"); sec.className = "card";
+  sec.innerHTML = `<h3>${esc(title)}</h3><p>${esc(text)}</p>`;
+  const sc = document.createElement("div"); sc.className = "grid-scroll";
+  const g = document.createElement("div"); g.className = "grid";
+  g.insertAdjacentHTML("beforeend", `<div class="hd"></div>` + COLS.map(c => `<div class="hd">${sw(c.k)}<span>${c.name}</span></div>`).join(""));
+  const order = COLS.map(c => c.k);
+  for (const p of rows) {
+    g.insertAdjacentHTML("beforeend", `<div class="lab">${esc(label(p))}</div>`);
+    order.forEach((k, i) => {
+      const b = document.createElement("button"); b.type = "button"; b.className = "tile" + (marked(p.source, p.light, k) ? " mark" : "");
+      b.setAttribute("aria-label", `${COL[k].name}: enlarge`);
+      b.appendChild(tileNode(p.source, p.light, k)); b.onclick = () => openLb(p.source, p.light, order, i);
+      g.appendChild(b);
+    });
+  }
+  sc.appendChild(g); sec.appendChild(sc); return sec;
+}
+function partHead(title, text) {
+  const d = document.createElement("div"); d.className = "part";
+  d.innerHTML = `<h2>${title}</h2><p class="muted">${text}</p>`; return d;
+}
+function render() {
+  const el = document.getElementById("disp-tabs"); el.innerHTML = "";
+  for (const [v, label] of [["ev0", "Fixed exposure (EV 0)"], ["ae", "Auto exposure"]]) {
+    const b = document.createElement("button"); b.type = "button"; b.textContent = label; b.setAttribute("aria-pressed", String(v === state.disp));
+    b.onclick = () => { state.disp = v; save(); render(); }; el.appendChild(b);
+  }
+  const variants = COLS.filter(c => c.text);
+  document.getElementById("variants").innerHTML = variants.map(c => `<li>${sw(c.k)} <b>${c.name} (${c.tag}).</b> ${c.text}</li>`).join("");
+  document.getElementById("scores").innerHTML = `<thead><tr><th>Lighting input</th><th class="num">PSNR ↑</th><th class="num">SSIM ↑</th><th class="num">LPIPS ↓</th></tr></thead><tbody>` +
+    variants.map(c => { const s = SCORES[c.k]; return `<tr><td>${sw(c.k)} ${c.name}</td><td class="num">${s[0].toFixed(2)}</td><td class="num">${s[1].toFixed(3)}</td><td class="num">${s[2].toFixed(3)}</td></tr>`; }).join("") + "</tbody>";
+  document.getElementById("summary").textContent = SUMMARY;
+  const root = document.getElementById("groups"); root.innerHTML = "";
+  const li = l => ATLAS.lights.indexOf(l), order = BY_PHOTO.map(x => x[0]);
+  root.appendChild(partHead("Part 1. By photograph", "Each group is one photograph under several target lightings."));
+  for (const [src, text] of BY_PHOTO)
+    root.appendChild(group(PHOTO[src], text, PICKS.filter(p => p.source === src).sort((a, b) => li(a.light) - li(b.light)), p => LIGHT[p.light] || p.light));
+  root.appendChild(partHead("Part 2. By lighting", "Each group is one target lighting applied to several photographs."));
+  const rank = s => { const i = order.indexOf(s); return i < 0 ? 100 + ATLAS.sources.indexOf(s) : i; };
+  for (const [light, text] of BY_LIGHT)
+    root.appendChild(group(LIGHT[light], text, PICKS.filter(p => p.light === light).sort((a, b) => rank(a.source) - rank(b.source)), p => PHOTO[p.source] || p.source));
+}
+
+const LB = { src: null, light: null, cols: [], i: 0 };
+function openLb(src, light, cols, i) { Object.assign(LB, { src, light, cols, i }); document.getElementById("lb").hidden = false; drawLb(); }
+function closeLb() { document.getElementById("lb").hidden = true; document.getElementById("lb-view").innerHTML = ""; }
+function drawLb() {
+  const k = LB.cols[LB.i];
+  document.getElementById("lb-title").textContent = `${COL[k].name} · ${PHOTO[LB.src] || LB.src} · ${LIGHT[LB.light] || LB.light}`;
+  const view = document.getElementById("lb-view"); view.innerHTML = "";
+  const base = k === "env" ? crop("img/env.jpg", 0, ATLAS.lights.indexOf(LB.light), 1, ATLAS.lights.length, "env") : tileNode(LB.src, LB.light, k);
+  base.querySelector("img").loading = "eager"; view.appendChild(base);
+  const url = fullUrl(LB.src, LB.light, k), res = document.getElementById("lb-res");
+  res.textContent = url ? "loading 2048 × 2048…" : "";
+  if (url) { const img = new Image(); img.className = "lb-full"; img.alt = COL[k].name;
+    img.onload = () => { img.classList.add("ok"); res.textContent = `${img.naturalWidth} × ${img.naturalHeight}`; };
+    img.onerror = () => { img.remove(); res.textContent = "preview only"; }; img.src = url; view.appendChild(img); }
+  const strip = document.getElementById("lb-strip"); strip.innerHTML = "";
+  LB.cols.forEach((c, j) => { const b = document.createElement("button"); b.type = "button"; b.setAttribute("aria-current", String(j === LB.i));
+    b.appendChild(tileNode(LB.src, LB.light, c)); b.insertAdjacentHTML("beforeend", `<span>${COL[c].name}</span>`);
+    b.onclick = () => { LB.i = j; drawLb(); }; strip.appendChild(b); });
+}
+const step = d => { LB.i = (LB.i + d + LB.cols.length) % LB.cols.length; drawLb(); };
+document.getElementById("lb-prev").onclick = () => step(-1);
+document.getElementById("lb-next").onclick = () => step(1);
+document.getElementById("lb-close").onclick = closeLb;
+document.addEventListener("keydown", e => { if (document.getElementById("lb").hidden) return;
+  if (e.key === "Escape") closeLb(); else if (e.key === "ArrowLeft") step(-1); else if (e.key === "ArrowRight") step(1); });
+
+ATLAS = {"sources": ["c01-s01", "c01-s02", "c02-s01", "c02-s02", "c04-s01", "c05-s02", "c06-s02", "c07-s02", "c11-s01", "c11-s02", "c12-s02", "p-extra-01", "p-extra-02"], "lights": ["front", "side", "back", "ferndale_studio_12", "ferndale_studio_02", "the_sky_is_on_fire", "cinema_hall", "kloofendal_overcast"], "rows": {"c01-s01": ["ferndale_studio_12", "ferndale_studio_02", "the_sky_is_on_fire", "cinema_hall"], "c01-s02": ["front", "side", "back", "ferndale_studio_12", "ferndale_studio_02"], "c02-s01": ["side", "ferndale_studio_12", "ferndale_studio_02", "the_sky_is_on_fire", "cinema_hall"], "c02-s02": ["ferndale_studio_02"], "c04-s01": ["ferndale_studio_02"], "c05-s02": ["ferndale_studio_02"], "c06-s02": ["ferndale_studio_02", "cinema_hall"], "c07-s02": ["ferndale_studio_02"], "c11-s01": ["ferndale_studio_02"], "c11-s02": ["front", "side", "back", "ferndale_studio_12", "ferndale_studio_02", "the_sky_is_on_fire", "cinema_hall", "kloofendal_overcast"], "c12-s02": ["front", "side", "back", "ferndale_studio_12"], "p-extra-01": ["front", "side", "back", "ferndale_studio_12", "ferndale_studio_02"], "p-extra-02": ["front", "side", "back", "ferndale_studio_12", "ferndale_studio_02", "cinema_hall"]}};
+PICKS = [{"source": "c01-s01", "light": "ferndale_studio_02"}, {"source": "c01-s01", "light": "ferndale_studio_12"}, {"source": "c01-s01", "light": "the_sky_is_on_fire"}, {"source": "c01-s01", "light": "cinema_hall"}, {"source": "c01-s02", "light": "front"}, {"source": "c01-s02", "light": "side"}, {"source": "c01-s02", "light": "back"}, {"source": "c01-s02", "light": "ferndale_studio_12"}, {"source": "c01-s02", "light": "ferndale_studio_02"}, {"source": "c02-s01", "light": "side"}, {"source": "c02-s01", "light": "ferndale_studio_12"}, {"source": "c02-s01", "light": "ferndale_studio_02"}, {"source": "c02-s01", "light": "the_sky_is_on_fire"}, {"source": "c02-s01", "light": "cinema_hall"}, {"source": "c02-s02", "light": "ferndale_studio_02"}, {"source": "c04-s01", "light": "ferndale_studio_02"}, {"source": "c05-s02", "light": "ferndale_studio_02"}, {"source": "c06-s02", "light": "ferndale_studio_02"}, {"source": "c06-s02", "light": "cinema_hall"}, {"source": "c07-s02", "light": "ferndale_studio_02"}, {"source": "c12-s02", "light": "front"}, {"source": "c12-s02", "light": "side"}, {"source": "c12-s02", "light": "back"}, {"source": "c12-s02", "light": "ferndale_studio_12"}, {"source": "c11-s02", "light": "front"}, {"source": "c11-s02", "light": "side"}, {"source": "c11-s02", "light": "back"}, {"source": "c11-s02", "light": "ferndale_studio_12"}, {"source": "c11-s02", "light": "ferndale_studio_02"}, {"source": "c11-s02", "light": "the_sky_is_on_fire"}, {"source": "c11-s02", "light": "cinema_hall"}, {"source": "c11-s02", "light": "kloofendal_overcast"}, {"source": "c11-s01", "light": "ferndale_studio_02"}, {"source": "p-extra-01", "light": "front"}, {"source": "p-extra-01", "light": "side"}, {"source": "p-extra-01", "light": "back"}, {"source": "p-extra-01", "light": "ferndale_studio_12"}, {"source": "p-extra-01", "light": "ferndale_studio_02"}, {"source": "p-extra-02", "light": "front"}, {"source": "p-extra-02", "light": "side"}, {"source": "p-extra-02", "light": "back"}, {"source": "p-extra-02", "light": "ferndale_studio_12"}, {"source": "p-extra-02", "light": "ferndale_studio_02"}, {"source": "p-extra-02", "light": "cinema_hall"}];
+render();
+</script>
+</body>
+</html>
