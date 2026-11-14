@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer"><meta name="robots" content="noindex,nofollow,noarchive">
+<title>Why LC rescales</title>
+<style>
+:root{--bg:#ffffff;--ink:#1b1f24;--mute:#6b7480;--line:#aeb7c1;--track:#e6e9ed;--ok:#2563c9;--bad:#c93a3a;--good:#1a8a2a}
+@media (prefers-color-scheme:dark){:root{--bg:#14171a;--ink:#e9ecef;--mute:#9aa4af;--line:#56606b;--track:#2a3036;--ok:#6ea8ff;--bad:#ff7b72;--good:#56c268}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+main{max-width:980px;margin:0 auto;padding:28px 16px 36px;text-align:center}
+h1{font-size:26px;margin:0 0 4px;font-weight:650;text-wrap:balance}
+.sub{color:var(--mute);margin:0 0 20px}
+h3{font-size:20px;font-weight:650;margin:0 0 4px}
+.lead{max-width:720px;margin:0 auto 12px;text-wrap:pretty}
+canvas{display:block;width:100%;aspect-ratio:1;border-radius:6px;background:#000}
+.sum{display:flex;justify-content:center;align-items:center;gap:10px;max-width:520px;margin:0 auto}
+.sum figure{flex:1 1 0;margin:0;min-width:0}
+.sum figcaption{margin-top:4px;font-size:14px;font-weight:600}
+.sum .op{flex:none;font-size:26px;color:var(--mute);padding-bottom:22px}
+.part{margin-top:34px}
+.sub + .part{margin-top:0}
+.sum{margin-top:14px}
+.row{max-width:720px;margin:16px auto 0;text-align:left}
+.row h4{margin:0 0 5px;font-size:15px;font-weight:650}
+.strip{display:grid;grid-template-columns:1fr auto 1fr auto 1fr auto 1fr auto 1fr;align-items:center;gap:5px}
+.strip span{color:var(--mute);font-size:15px;line-height:1}
+.ref .strip{padding:6px;margin:0 -6px;border:2px solid var(--line);border-radius:10px}
+.ends{display:flex;justify-content:space-between;gap:12px;margin-top:5px;font-size:13px;color:var(--mute)}
+.ends .bad{color:var(--bad);font-weight:650} .ends .good{color:var(--good);font-weight:650}
+.verdict{margin:6px 0 0;display:flex;gap:7px;font-size:15px;line-height:1.35;text-wrap:pretty}
+.verdict span:first-child{font-weight:700;flex:none}
+.no span:first-child{color:var(--bad)} .yes span:first-child{color:var(--good)}
+.how{margin:4px 0 0;font-size:13px;color:var(--mute);text-wrap:pretty}
+.say{max-width:720px;margin:16px auto 0;text-wrap:pretty}
+.ctl{max-width:560px;margin:4px auto 10px;display:flex;align-items:center;gap:10px;font-size:14px;color:var(--mute)}
+.ctl input{flex:1;min-width:0;accent-color:var(--ok)}
+.ctl button{flex:none;min-width:86px;padding:6px 12px;font:inherit;font-weight:600;color:var(--ink);background:var(--track);border:1px solid var(--line);border-radius:6px;cursor:pointer}
+.tiles{max-width:720px;margin:8px auto 0;display:grid;grid-template-columns:1fr 1fr;gap:18px 28px;text-align:left}
+.tile{display:grid;grid-template-columns:120px 1fr;column-gap:14px;align-content:start}
+.tile h4{grid-column:1/-1;margin:0 0 6px;font-size:15px;font-weight:650;line-height:1.25;min-height:2.5em;display:flex;gap:8px;align-items:baseline}
+.tile h4 i{flex:none;width:22px;height:3px;border-radius:2px;transform:translateY(-4px)}
+.tile h4 .bad{background:var(--bad)} .tile h4 .good{background:var(--good)}
+.tile .verdict{grid-column:1/-1;margin-top:8px}
+.tile .m:first-child{margin-top:0}
+.m{margin-top:8px;font-size:13px}
+.m div{display:flex;justify-content:space-between;gap:8px;color:var(--mute)}
+.m .say{max-width:none;margin:0;color:var(--ink)} .m.off .say{font-weight:700;color:var(--bad)}
+.track{position:relative;height:8px;margin-top:3px;border-radius:4px;background:var(--track)}
+.fill,.over{position:absolute;top:0;bottom:0;background:var(--ok)}
+.fill{left:0;border-radius:4px 0 0 4px}
+.over{left:66.667%;border-radius:0 4px 4px 0;background:var(--bad)}
+.tick{position:absolute;top:-3px;bottom:-3px;left:66.667%;width:2px;margin-left:-1px;background:var(--ink)}
+.key{margin:14px 0 0;font-size:13px;color:var(--mute)}
+.key b{display:inline-block;width:2px;height:13px;margin:0 6px -2px 0;background:var(--ink)}
+.map{max-width:720px;margin:0 auto;overflow-x:auto}
+.mapin{position:relative;aspect-ratio:640/310;min-width:520px}
+.mapin svg{position:absolute;inset:0;width:100%;height:100%}
+.mapin canvas{position:absolute;width:9.375%;border-radius:4px}
+.mapin text{font-size:13px;fill:var(--mute)}
+.mapin .ink{fill:var(--ink);font-weight:600}
+.mapin .axis{stroke:var(--line);stroke-width:1.5}
+.mapin .dash{stroke:var(--line);stroke-width:1;stroke-dasharray:4 4}
+.mapin .lbad{stroke:var(--bad);stroke-width:3} .mapin .lgood{stroke:var(--good);stroke-width:3}
+.mapin .fbad{fill:var(--bad)} .mapin .fgood{fill:var(--good)}
+.mapin circle{stroke:var(--bg);stroke-width:2}
+.take{margin:26px auto 0;max-width:760px;font-size:18px;text-wrap:pretty}
+.note{margin:12px auto 0;max-width:760px;color:var(--mute);font-size:13px}
+@media (max-width:560px){.strip{gap:2px}.strip span{font-size:11px}.tiles{grid-template-columns:1fr}.tile h4{min-height:0}}
+</style>
+</head>
+<body>
+<main>
+  <h1>Why LC rescales noise and time</h1>
+  <p class="sub">An informal picture, for intuition only</p>
+
+  <section class="part">
+    <h3>The setting</h3>
+    <p class="lead">A flow model is trained to turn noise into an image. At each step, its velocity tells it which way to move. Here is the model under light 1 and under light 2:</p>
+    <div id="single"></div>
+  </section>
+
+  <section class="part">
+    <h3>Can we simply add the two velocities?</h3>
+    <p class="lead">The image under both lights is the sum of the two single-light images. So for both lights, one might let the model follow velocity 1 + velocity 2.</p>
+    <div class="sum">
+      <figure><canvas id="c1" width="150" height="150"></canvas><figcaption>Light 1</figcaption></figure>
+      <span class="op">+</span>
+      <figure><canvas id="c2" width="150" height="150"></canvas><figcaption>Light 2</figcaption></figure>
+      <span class="op">=</span>
+      <figure><canvas id="c12" width="150" height="150"></canvas><figcaption>Both lights</figcaption></figure>
+    </div>
+    <div id="combined"></div>
+  </section>
+
+  <section class="part">
+    <h3>What each velocity does</h3>
+    <p class="lead">A velocity does two things at once: it adds light and it removes noise. Velocity 1 + velocity 2 adds the right light, but it removes the noise of both flows: 41% more noise than there is. It points past the image.</p>
+    <div class="map"><div class="mapin">
+      <svg viewBox="0 0 640 310" role="img" aria-label="Velocity 1 plus velocity 2 points past the both-lights image; the LC combination points at it.">
+        <defs>
+          <marker id="abad" markerWidth="9" markerHeight="8" refX="8" refY="4" orient="auto"><path class="fbad" d="M0,0 L9,4 L0,8 z"/></marker>
+          <marker id="agood" markerWidth="9" markerHeight="8" refX="8" refY="4" orient="auto"><path class="fgood" d="M0,0 L9,4 L0,8 z"/></marker>
+        </defs>
+        <line class="axis" x1="96" y1="262" x2="612" y2="262"/>
+        <line class="axis" x1="96" y1="262" x2="96" y2="100"/>
+        <line class="dash" x1="96" y1="112" x2="548" y2="112"/>
+        <line class="dash" x1="416" y1="262" x2="416" y2="112"/>
+        <line class="lbad" x1="96" y1="262" x2="548.5" y2="112" marker-end="url(#abad)"/>
+        <line class="lgood" x1="96" y1="262" x2="416" y2="112" marker-end="url(#agood)"/>
+        <circle id="dbad" class="fbad" r="6" cx="96" cy="262"/>
+        <circle id="dgood" class="fgood" r="6" cx="96" cy="262"/>
+        <text x="40" y="224" text-anchor="middle">noise</text>
+        <text class="ink" x="416" y="26" text-anchor="middle">both-lights image</text>
+        <text class="ink" x="549" y="26" text-anchor="middle">noisy image</text>
+        <text x="96" y="281" text-anchor="middle">none</text>
+        <text x="416" y="281" text-anchor="middle">all of it</text>
+        <text class="fbad" x="549" y="281" text-anchor="middle">41% too much</text>
+        <text class="ink" x="354" y="302" text-anchor="middle">noise removed</text>
+        <text x="88" y="116" text-anchor="end">all</text>
+        <text class="ink" transform="translate(70,172) rotate(-90)" text-anchor="middle">light added</text>
+      </svg>
+      <canvas id="m0" width="150" height="150" style="left:1.5625%;top:74.84%"></canvas>
+      <canvas id="m1" width="150" height="150" style="left:60.3125%;top:11.61%"></canvas>
+      <canvas id="m2" width="150" height="150" style="left:81.09%;top:11.61%"></canvas>
+    </div></div>
+    <p class="lead">Follow both velocities from the same noise:</p>
+    <div class="ctl"><button id="play" type="button">▶ Play</button><span>noise</span><input id="t" type="range" min="0" max="1" step="0.005" value="1" aria-label="position along the flow"><span>image</span></div>
+    <div class="tiles" id="tiles"></div>
+    <p class="key"><b></b>100%: all the light of the both-lights image, and all the noise the model started from</p>
+  </section>
+
+  <p class="take">The plain sum of the two velocities is not the right velocity for the both-lights image. LC combines the two velocities with a rescaling of noise and time, which gives the right one, and trains the model under both lights to predict it. The rescaling follows from a derivation (Appendix H.1); nothing in it is tuned.</p>
+  <p class="note">Exact in linear HDR; approximate in the Log-Gamma coordinates of the full model (Appendix H.3). Noise is drawn at reduced strength, the same in every frame, so that the frames stay readable. The frames use ideal velocities; in training, the two single-light velocities are the model's own predictions. The sphere is a synthetic scene, used for illustration only.</p>
+</main>
+
+<script>
+(function () {
+  var N = 150, R2 = Math.SQRT2, PX = N * N * 3;
+
+  // ---- a small synthetic scene: a sphere on a floor, two point lights ----
+  function sub(a, b) { return [a[0] - b[0], a[1] - b[1], a[2] - b[2]]; }
+  function dot(a, b) { return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]; }
+  function mul(a, k) { return [a[0] * k, a[1] * k, a[2] * k]; }
+  function add(a, b) { return [a[0] + b[0], a[1] + b[1], a[2] + b[2]]; }
+  function norm(a) { return mul(a, 1 / Math.sqrt(dot(a, a))); }
+  function cross(a, b) { return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]]; }
+  function hitSphere(o, d) { // unit sphere at the origin; returns distance or -1
+    var b = dot(o, d), c = dot(o, o) - 1, h = b * b - c;
+    if (h < 0) return -1;
+    var t = -b - Math.sqrt(h);
+    return t > 1e-4 ? t : -1;
+  }
+  var LIGHTS = [
+    { p: [-3.2, 3.0, 2.2], c: [1.00, 0.80, 0.58] },
+    { p: [3.4, 2.4, 1.2], c: [0.58, 0.80, 1.00] }
+  ];
+  var EYE = [0, 1.15, 5.4], FWD = norm(sub([0, -0.3, 0], EYE)), RIGHT = norm(cross(FWD, [0, 1, 0])), UP = cross(RIGHT, FWD), FOV = 0.36;
+  function shade(o, d, L) {
+    var ts = hitSphere(o, d), tp = d[1] < -1e-6 ? (-1 - o[1]) / d[1] : -1, p, n, alb, onSphere;
+    if (ts > 0 && (tp < 0 || ts < tp)) { p = add(o, mul(d, ts)); n = p; alb = 0.82; onSphere = true; }
+    else if (tp > 0) { p = add(o, mul(d, tp)); n = [0, 1, 0]; alb = 0.5; onSphere = false; }
+    else return [0, 0, 0];
+    var toL = sub(L.p, p), dist = Math.sqrt(dot(toL, toL)), l = mul(toL, 1 / dist), nl = dot(n, l);
+    if (nl <= 0) return [0, 0, 0];
+    if (!onSphere) { var s = hitSphere(p, l); if (s > 0 && s < dist) return [0, 0, 0]; }
+    var k = 10.5 * alb * nl / (dist * dist), spec = 0;
+    if (onSphere) { var h = norm(sub(l, d)); spec = 2.2 * Math.pow(Math.max(dot(n, h), 0), 70) / (dist * dist) * 10.5; }
+    return [L.c[0] * k + spec, L.c[1] * k + spec, L.c[2] * k + spec];
+  }
+  function renderLight(L) {
+    var out = new Float32Array(PX), S = 3;
+    for (var y = 0; y < N; y++) for (var x = 0; x < N; x++) {
+      var acc = [0, 0, 0];
+      for (var sy = 0; sy < S; sy++) for (var sx = 0; sx < S; sx++) {
+        var u = ((x + (sx + 0.5) / S) / N * 2 - 1) * FOV, v = (1 - (y + (sy + 0.5) / S) / N * 2) * FOV;
+        acc = add(acc, shade(EYE, norm(add(FWD, add(mul(RIGHT, u), mul(UP, v)))), L));
+      }
+      var i = (y * N + x) * 3;
+      out[i] = acc[0] / (S * S); out[i + 1] = acc[1] / (S * S); out[i + 2] = acc[2] / (S * S);
+    }
+    return out;
+  }
+  var H1 = renderLight(LIGHTS[0]), H2 = renderLight(LIGHTS[1]);
+
+  // ---- two independent standard Gaussian noises, fixed ----
+  function gaussian(seed) {
+    var a = seed >>> 0, out = new Float32Array(PX);
+    function rnd() { a = (a + 0x6D2B79F5) | 0; var t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }
+    for (var i = 0; i < PX; i += 2) {
+      var r = Math.sqrt(-2 * Math.log(rnd() + 1e-12)), th = 2 * Math.PI * rnd();
+      out[i] = r * Math.cos(th); if (i + 1 < PX) out[i + 1] = r * Math.sin(th);
+    }
+    return out;
+  }
+  var E1 = gaussian(17), E2 = gaussian(4242);
+
+  // every image on this page is  n1·E1 + n2·E2 + l1·H1 + l2·H2
+  var SHOW = 0.4; // noise is drawn at reduced strength, the same in every frame, so the frames stay readable
+  var LUT = new Uint8ClampedArray(1025);
+  for (var q = 0; q <= 1024; q++) LUT[q] = Math.round(255 * Math.pow(q / 1024, 1 / 2.2));
+  function paint(canvas, n1, n2, l1, l2) {
+    var ctx = canvas.getContext('2d'), img = ctx.createImageData(N, N), d = img.data;
+    for (var i = 0, j = 0; i < PX; i += 3, j += 4) {
+      for (var c = 0; c < 3; c++) {
+        var v = SHOW * (n1 * E1[i] + n2 * E2[i]) + l1 * H1[i + c] + l2 * H2[i + c];
+        d[j + c] = LUT[v <= 0 ? 0 : v >= 1 ? 1024 : (v * 1024) | 0];
+      }
+      d[j + 3] = 255;
+    }
+    ctx.putImageData(img, 0, 0);
+  }
+  paint(document.getElementById('c1'), 0, 0, 1, 0);
+  paint(document.getElementById('c2'), 0, 0, 0, 1);
+  paint(document.getElementById('c12'), 0, 0, 1, 1);
+
+  // ---- flows, shown as five frames from noise (t = 0) to image (t = 1) ----
+  // a frame is [n1, n2, l1, l2]; the single-light flows are x_t = (1 - t)·E + t·H
+  var TIMES = [0, 0.25, 0.5, 0.75, 1];
+  function gamma(t) { return 1 + (R2 - 1) * t; }
+  function comp(t) { return R2 * t / gamma(t); } // the slightly later time at which the two flows are read
+  function sumAt(s, k) { return [k * (1 - s), k * (1 - s), k * s, k * s]; } // k·(x1_s + x2_s)
+  var SINGLE = [
+    { title: 'Model under light 1', left: 'noise', right: 'image under light 1',
+      frame: function (t) { return [1 - t, 0, t, 0]; } },
+    { title: 'Model under light 2', left: 'another noise', right: 'image under light 2',
+      frame: function (t) { return [0, 1 - t, 0, t]; } }
+  ];
+  var COMBINED = [
+    { cls: 'ref', title: 'The right flow to the both-lights image', left: 'noise', right: 'image under both lights',
+      frame: function (t) { return [(1 - t) / R2, (1 - t) / R2, t, t]; } },
+    // start from the same noise and move along v1 + v2 = (H1 + H2) - (E1 + E2)
+    { title: 'Follow velocity 1 + velocity 2', ok: false, left: 'noise', right: ['bad', '✗ not the both-lights image'],
+      verdict: 'The result is a noisy image. Each velocity removes its own noise, and the two noises together are 41% stronger than the one noise the model starts from, so too much is removed.',
+      frame: function (t) { var k = (1 - R2 * t) / R2; return [k, k, t, t]; } },
+    { title: 'Follow the two velocities combined with the rescaling (LC)', ok: true, left: 'noise', right: ['good', '✓ image under both lights'],
+      verdict: 'The same as the right flow, at every step.',
+      frame: function (t) { return sumAt(comp(t), gamma(t) / R2); } }
+  ];
+  function end(e) { return typeof e === 'string' ? '<span>' + e + '</span>' : '<span class="' + e[0] + '">' + e[1] + '</span>'; }
+  function build(hostId, rows) {
+    var host = document.getElementById(hostId);
+    rows.forEach(function (R) {
+      var el = document.createElement('div'), cells = TIMES.map(function () { return '<canvas width="' + N + '" height="' + N + '"></canvas>'; });
+      el.className = 'row ' + (R.cls || '');
+      el.innerHTML = '<h4>' + R.title + '</h4><div class="strip">' + cells.join('<span>→</span>') + '</div>' +
+        '<div class="ends">' + end(R.left) + end(R.right) + '</div>' +
+        (R.verdict ? '<p class="verdict ' + (R.ok ? 'yes' : 'no') + '"><span>' + (R.ok ? '✓' : '✗') + '</span><span>' + R.verdict + '</span></p>' : '') +
+        (R.how ? '<p class="how">' + R.how + '</p>' : '');
+      host.appendChild(el);
+      [].forEach.call(el.querySelectorAll('canvas'), function (c, k) {
+        var f = R.frame(TIMES[k]);
+        paint(c, f[0], f[1], f[2], f[3]);
+      });
+    });
+  }
+  build('single', SINGLE);
+  build('combined', COMBINED);
+
+  // ---- start from the same noise and follow a velocity ----
+  // light(t): how much of the both-lights image has been added; removed(t): how much of the starting noise has been removed
+  var TILES = [
+    // v1 + v2 = (H1 + H2) - (E1 + E2), and E1 + E2 is √2 times the starting noise
+    { title: 'Velocity 1 + velocity 2', ok: false, verdict: 'It points past the image: too much noise is removed.',
+      light: function (t) { return t; }, removed: function (t) { return R2 * t; } },
+    { title: 'The two velocities combined with the rescaling (LC)', ok: true, verdict: 'It points at the image. This is the right velocity.',
+      light: function (t) { return gamma(t) * comp(t) / R2; }, removed: function (t) { return 1 - gamma(t) * (1 - comp(t)); } }
+  ];
+  var SCALE = 1.5, host = document.getElementById('tiles'), slider = document.getElementById('t'), btn = document.getElementById('play');
+  function meter(name) {
+    return '<div class="m"><div><span>' + name + '</span><span class="say"></span></div>' +
+           '<div class="track"><i class="fill"></i><i class="over"></i><b class="tick"></b></div></div>';
+  }
+  var views = TILES.map(function (T) {
+    var el = document.createElement('section');
+    el.className = 'tile';
+    el.innerHTML = '<h4><i class="' + (T.ok ? 'good' : 'bad') + '"></i><span>' + T.title + '</span></h4><canvas width="' + N + '" height="' + N + '"></canvas><div>' + meter('light added') + meter('noise removed') +
+      '</div><p class="verdict ' + (T.ok ? 'yes' : 'no') + '"><span>' + (T.ok ? '✓' : '✗') + '</span><span>' + T.verdict + '</span></p>';
+    host.appendChild(el);
+    var m = el.querySelectorAll('.m');
+    return { T: T, canvas: el.querySelector('canvas'), light: m[0], removed: m[1] };
+  });
+  function setMeter(m, value) {
+    var over = value > 1.004;
+    m.querySelector('.fill').style.width = (Math.min(value, 1) / SCALE * 100) + '%';
+    m.querySelector('.over').style.width = (Math.max(value - 1, 0) / SCALE * 100) + '%';
+    m.querySelector('.say').textContent = Math.round(value * 100) + '%' + (over ? ', too much' : '');
+    m.classList.toggle('off', over);
+  }
+  var dots = [document.getElementById('dbad'), document.getElementById('dgood')];
+  function update() {
+    var t = +slider.value;
+    views.forEach(function (v) {
+      var li = v.T.light(t), left = 1 - v.T.removed(t); // noise still in the image, as a multiple of the starting noise
+      paint(v.canvas, left / R2, left / R2, li, li);
+      setMeter(v.light, li);
+      setMeter(v.removed, 1 - left);
+    });
+    TILES.forEach(function (T, k) {
+      dots[k].setAttribute('cx', 96 + 320 * T.removed(t));
+      dots[k].setAttribute('cy', 262 - 150 * T.light(t));
+    });
+  }
+  var raf = 0, t0 = 0, LENGTH = 5000;
+  function stop() { cancelAnimationFrame(raf); raf = 0; btn.textContent = '▶ Play'; }
+  function step(now) {
+    var t = Math.min((now - t0) / LENGTH, 1);
+    slider.value = t; update();
+    if (t < 1) raf = requestAnimationFrame(step); else stop();
+  }
+  btn.addEventListener('click', function () {
+    if (raf) { stop(); return; }
+    var from = +slider.value >= 1 ? 0 : +slider.value;
+    t0 = performance.now() - from * LENGTH;
+    btn.textContent = '❚❚ Pause';
+    raf = requestAnimationFrame(step);
+  });
+  slider.addEventListener('input', function () { if (raf) stop(); update(); });
+  update();
+
+  // the three images on the map: the starting noise, the both-lights image, and where velocity 1 + velocity 2 ends
+  paint(document.getElementById('m0'), 1 / R2, 1 / R2, 0, 0);
+  paint(document.getElementById('m1'), 0, 0, 1, 1);
+  paint(document.getElementById('m2'), (1 - R2) / R2, (1 - R2) / R2, 1, 1);
+})();
+</script>
+</body>
+</html>
